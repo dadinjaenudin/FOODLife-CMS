@@ -1,0 +1,137 @@
+<!-- Modifier Table - Ultra Compact -->
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Modifier Name</th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Brand</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Options</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Max Select</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Required</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for modifier in modifiers %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-3 py-2">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-sliders text-indigo-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-900">{{ modifier.name }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    <div class="text-xs text-gray-900">{{ modifier.brand.name }}</div>
+                    <div class="text-xs text-gray-500">{{ modifier.brand.company.name }}</div>
+                </td>
+                <td class="px-3 py-2 text-center">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        {{ modifier.option_count|default:0 }}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                    {% if modifier.max_selections == 0 %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                        <i class="fas fa-infinity text-xs"></i>
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-medium text-gray-700">{{ modifier.max_selections }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-center">
+                    {% if modifier.is_required %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                        <i class="fas fa-asterisk text-xs mr-1"></i> Required
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                        Optional
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-center whitespace-nowrap">
+                    {% if modifier.is_active %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle text-xs mr-1"></i> Active
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                        <i class="fas fa-times-circle text-xs mr-1"></i> Inactive
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1">
+                        <button 
+                            @click="showModal = true; modalTitle = 'Edit Modifier'; modalUrl = '{% url "modifier:edit" modifier.pk %}'"
+                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Edit">
+                            <i class="fas fa-edit text-xs"></i>
+                        </button>
+                        <button 
+                            @click="showDeleteConfirm = true; deleteUrl = '{% url "modifier:delete" modifier.pk %}'; deleteItem = '{{ modifier.name }}'"
+                            class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                            title="Delete">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-3 py-8 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                        <i class="fas fa-sliders text-4xl mb-3"></i>
+                        <p class="text-sm font-medium text-gray-500">No modifiers found</p>
+                        <p class="text-xs text-gray-400 mt-1">Click "Add Modifier" to create your first modifier</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if modifiers.has_other_pages %}
+<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-xs text-gray-700">
+                Showing page <span class="font-medium">{{ modifiers.number }}</span> of <span class="font-medium">{{ modifiers.paginator.num_pages }}</span>
+                <span class="text-gray-500">({{ modifiers.paginator.count }} total modifiers)</span>
+            </p>
+        </div>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {% if modifiers.has_previous %}
+                <a href="?page=1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+                <a href="?page={{ modifiers.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+                {% endif %}
+                
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-700">
+                    {{ modifiers.number }}
+                </span>
+                
+                {% if modifiers.has_next %}
+                <a href="?page={{ modifiers.next_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ modifiers.paginator.num_pages }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+</div>
+{% endif %}
