@@ -40,6 +40,8 @@ urlpatterns = [
     path('products/', include('products.urls_product')),
     path('products/categories/', include('products.urls_category')),
     path('products/modifiers/', include('products.urls_modifier')),
+    path('products/tableareas/', include('products.urls_tablearea')),
+    path('products/kitchenstations/', include('products.urls_kitchenstation')),
     
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

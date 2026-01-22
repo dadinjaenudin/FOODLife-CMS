@@ -1,0 +1,180 @@
+<!-- Category Form - Ultra Compact -->
+<form 
+    hx-post="{% if category %}{% url 'category:edit' category.pk %}{% else %}{% url 'category:create' %}{% endif %}"
+    x-data="{ loading: false }"
+    @submit="loading = true"
+    class="space-y-3">
+    {% csrf_token %}
+    
+    <!-- Error Messages -->
+    <div id="form-errors" class="hidden">
+        <div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-lg text-xs">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            <span id="error-message"></span>
+        </div>
+    </div>
+    
+    <!-- Brand Selection -->
+    {% if category %}
+    <!-- Edit mode: Show brand info (read-only) -->
+    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+        <div class="text-xs text-blue-800">
+            <i class="fas fa-info-circle mr-1"></i>
+            <strong>Brand:</strong> {{ category.brand.name }} ({{ category.brand.company.name }})
+        </div>
+    </div>
+    <input type="hidden" name="brand_id" value="{{ category.brand.id }}">
+    {% else %}
+    <!-- Create mode: Brand dropdown -->
+    <div>
+        <label for="brand_id" class="block text-xs font-medium text-gray-700 mb-1">
+            Brand <span class="text-red-500">*</span>
+        </label>
+        <select 
+            name="brand_id" 
+            id="brand_id"
+            required
+            x-data="{ selectedBrand: '' }"
+            @change="selectedBrand = $event.target.value"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select Brand</option>
+            {% for brand in brands %}
+            <option value="{{ brand.id }}">{{ brand.name }} - {{ brand.company.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    
+    <!-- Category Name -->
+    <div>
+        <label for="name" class="block text-xs font-medium text-gray-700 mb-1">
+            Category Name <span class="text-red-500">*</span>
+        </label>
+        <input 
+            type="text" 
+            name="name" 
+            id="name"
+            value="{{ category.name|default:'' }}"
+            required
+            maxlength="200"
+            placeholder="e.g., Makanan, Minuman, Snack"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+    </div>
+    
+    <!-- Parent Category (Optional) -->
+    <div>
+        <label for="parent_id" class="block text-xs font-medium text-gray-700 mb-1">
+            Parent Category <small class="text-gray-500">(Optional)</small>
+        </label>
+        <select 
+            name="parent_id" 
+            id="parent_id"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">None (Top Level)</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if category and category.parent_id == cat.id %}selected{% endif %}>
+                {{ cat.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <p class="mt-1 text-xs text-gray-500">
+            <i class="fas fa-info-circle mr-1"></i>
+            For hierarchical structure (e.g., Makanan → Ayam → Ayam Geprek)
+        </p>
+    </div>
+    
+    <!-- Two Columns: Sort Order & Icon -->
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Sort Order -->
+        <div>
+            <label for="sort_order" class="block text-xs font-medium text-gray-700 mb-1">
+                Sort Order
+            </label>
+            <input 
+                type="number" 
+                name="sort_order" 
+                id="sort_order"
+                value="{{ category.sort_order|default:'0' }}"
+                min="0"
+                placeholder="0"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+        
+        <!-- Icon -->
+        <div>
+            <label for="icon" class="block text-xs font-medium text-gray-700 mb-1">
+                Icon <small class="text-gray-500">(Optional)</small>
+            </label>
+            <input 
+                type="text" 
+                name="icon" 
+                id="icon"
+                value="{{ category.icon|default:'' }}"
+                maxlength="100"
+                placeholder="e.g., fa-utensils, fa-coffee"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+    </div>
+    
+    <!-- Active Status -->
+    <div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
+        <input 
+            type="checkbox" 
+            name="is_active" 
+            id="is_active"
+            {% if not category or category.is_active %}checked{% endif %}
+            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+        <label for="is_active" class="text-xs font-medium text-gray-700">
+            Active
+        </label>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="flex justify-end gap-2 pt-3 border-t">
+        <button 
+            type="button"
+            @click="showModal = false"
+            class="px-4 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+            Cancel
+        </button>
+        <button 
+            type="submit"
+            :disabled="loading"
+            class="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
+            <span x-show="!loading">
+                <i class="fas fa-save mr-1"></i>
+                {% if category %}Update{% else %}Create{% endif %}
+            </span>
+            <span x-show="loading">
+                <i class="fas fa-spinner fa-spin mr-1"></i>
+                Saving...
+            </span>
+        </button>
+    </div>
+</form>
+
+<script>
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.target.id === 'modal-content') {
+            try {
+                const response = JSON.parse(evt.detail.xhr.response);
+                if (response.success) {
+                    // Close modal and reload table
+                    document.querySelector('[x-data]').__x.$data.showModal = false;
+                    htmx.trigger('#category-table', 'refresh');
+                    
+                    // Show toast notification
+                    if (typeof showToast !== 'undefined') {
+                        showToast(response.message, 'success');
+                    }
+                } else {
+                    // Show error in form
+                    document.getElementById('form-errors').classList.remove('hidden');
+                    document.getElementById('error-message').textContent = response.message;
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
+        }
+    });
+</script>
