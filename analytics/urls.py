@@ -2,23 +2,22 @@
 Analytics URLs - Reporting & Analytics Endpoints
 """
 from django.urls import path
-from . import views
+from . import api_views, report_views
+
+app_name = 'analytics'
 
 urlpatterns = [
-    # Sales Reports
-    path('daily-sales/', views.daily_sales_report, name='daily-sales'),
-    path('product-sales/', views.product_sales_report, name='product-sales'),
+    # UI Reports (HTML)
+    path('sales-report/', report_views.sales_report_dashboard, name='sales-report'),
+    path('product-performance/', report_views.product_performance_report, name='product-performance'),
+    path('hourly-sales/', report_views.hourly_sales_report, name='hourly-sales'),
     
-    # Promotion Reports
-    path('promotion-performance/', views.promotion_performance_report, name='promotion-performance'),
-    
-    # Member Reports
-    path('member-analytics/', views.member_analytics_report, name='member-analytics'),
-    
-    # Inventory & COGS
-    path('inventory-cogs/', views.inventory_cogs_report, name='inventory-cogs'),
-    
-    # Operational Reports
-    path('cashier-performance/', views.cashier_performance_report, name='cashier-performance'),
-    path('payment-methods/', views.payment_method_report, name='payment-methods'),
+    # API Endpoints (JSON)
+    path('api/daily-sales/', api_views.daily_sales_report, name='api-daily-sales'),
+    path('api/product-sales/', api_views.product_sales_report, name='api-product-sales'),
+    path('api/promotion-performance/', api_views.promotion_performance_report, name='api-promotion-performance'),
+    path('api/member-analytics/', api_views.member_analytics_report, name='api-member-analytics'),
+    path('api/inventory-cogs/', api_views.inventory_cogs_report, name='api-inventory-cogs'),
+    path('api/cashier-performance/', api_views.cashier_performance_report, name='api-cashier-performance'),
+    path('api/payment-methods/', api_views.payment_method_report, name='api-payment-methods'),
 ]
