@@ -567,3 +567,11 @@ LOGIN_URL = 'auth:login'
 LOGIN_REDIRECT_URL = 'dashboard:index'
 LOGOUT_REDIRECT_URL = 'auth:login'
 
+
+# CSRF Settings for HTMX
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
+CSRF_TRUSTED_ORIGINS = [
+    'https://8000-i56a4gtwdhxhy7tubdwem-583b4d74.sandbox.novita.ai',
+    'https://*.sandbox.novita.ai',
+]
+
