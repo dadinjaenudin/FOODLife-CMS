@@ -30,6 +30,9 @@ urlpatterns = [
     # Company Management
     path('company/', include('core.urls_company')),
     
+    # Brand Management
+    path('brand/', include('core.urls_brand')),
+    
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
