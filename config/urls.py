@@ -47,6 +47,10 @@ urlpatterns = [
     path('members/', include('members.urls')),
     path('promotions/', include('promotions.urls')),
     
+    # Inventory Management
+    path('inventory/items/', include('inventory.urls_inventoryitem')),
+    path('inventory/recipes/', include('inventory.urls_recipe')),
+    
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
