@@ -25,4 +25,7 @@ urlpatterns = [
     
     # API Endpoints - Edge → HO (Transaction Push)
     path('api/v1/transactions/', include('transactions.api.urls')),
+    
+    # API Endpoints - Analytics & Reporting
+    path('api/v1/analytics/', include('analytics.urls')),
 ]

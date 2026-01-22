@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'promotions',     # Promotion engine
     'inventory',      # Inventory & Recipe management
     'transactions',   # Transaction data from Edge
+    'analytics',      # Reporting & Analytics
 ]
 
 MIDDLEWARE = [
