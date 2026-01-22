@@ -1,0 +1,158 @@
+<!-- Company Table - Ultra Compact -->
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Code
+                </th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Company Name
+                </th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Timezone
+                </th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Points Config
+                </th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for company in companies %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-3 py-2 whitespace-nowrap">
+                    <div class="flex items-center">
+                        {% if company.logo %}
+                        <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-7 h-7 rounded-lg object-cover mr-2">
+                        {% else %}
+                        <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-building text-blue-600 text-xs"></i>
+                        </div>
+                        {% endif %}
+                        <span class="text-xs font-semibold text-gray-900">{{ company.code }}</span>
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    <div class="text-xs font-medium text-gray-900">{{ company.name }}</div>
+                    <div class="text-xs text-gray-500">Created {{ company.created_at|date:"M d, Y" }}</div>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                    <span class="text-xs text-gray-600">
+                        <i class="fas fa-clock text-xs mr-1"></i>{{ company.timezone }}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                    <div class="text-xs text-gray-900">{{ company.points_per_currency }} pts/IDR</div>
+                    <div class="text-xs text-gray-500">Exp: {{ company.point_expiry_months }}mo</div>
+                </td>
+                <td class="px-3 py-2 text-center whitespace-nowrap">
+                    {% if company.is_active %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle text-xs mr-1"></i> Active
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                        <i class="fas fa-times-circle text-xs mr-1"></i> Inactive
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1">
+                        <!-- Edit Button -->
+                        <button 
+                            @click="showModal = true; modalTitle = 'Edit Company'; modalUrl = '{% url "company:edit" company.pk %}'"
+                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Edit">
+                            <i class="fas fa-edit text-xs"></i>
+                        </button>
+                        
+                        <!-- Delete Button -->
+                        <button 
+                            @click="showDeleteConfirm = true; deleteUrl = '{% url "company:delete" company.pk %}'; deleteItem = '{{ company.name }}'"
+                            class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                            title="Delete">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                        
+                        <!-- View Brands -->
+                        <a href="#" 
+                           class="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition"
+                           title="View Brands">
+                            <i class="fas fa-store text-xs"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-3 py-8 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-500">
+                        <i class="fas fa-building text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm font-medium">No companies found</p>
+                        {% if search %}
+                        <p class="text-xs mt-1">Try adjusting your search terms</p>
+                        {% else %}
+                        <p class="text-xs mt-1">Click "Add Company" to create your first company</p>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination - Ultra Compact -->
+{% if companies.has_other_pages %}
+<div class="bg-gray-50 px-3 py-2 border-t border-gray-200">
+    <div class="flex items-center justify-between">
+        <div class="text-xs text-gray-600">
+            Showing <span class="font-semibold">{{ companies.start_index }}</span> to 
+            <span class="font-semibold">{{ companies.end_index }}</span> of 
+            <span class="font-semibold">{{ total_count }}</span> results
+        </div>
+        
+        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if companies.has_previous %}
+            <a href="?page=1{% if search %}&search={{ search }}{% endif %}" 
+               hx-get="?page=1{% if search %}&search={{ search }}{% endif %}"
+               hx-target="#company-table"
+               class="relative inline-flex items-center px-2 py-1 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+            <a href="?page={{ companies.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               hx-get="?page={{ companies.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               hx-target="#company-table"
+               class="relative inline-flex items-center px-2 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-angle-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="relative inline-flex items-center px-3 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-700">
+                Page {{ companies.number }} of {{ companies.paginator.num_pages }}
+            </span>
+            
+            {% if companies.has_next %}
+            <a href="?page={{ companies.next_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               hx-get="?page={{ companies.next_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               hx-target="#company-table"
+               class="relative inline-flex items-center px-2 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-angle-right"></i>
+            </a>
+            <a href="?page={{ companies.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}"
+               hx-get="?page={{ companies.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}"
+               hx-target="#company-table"
+               class="relative inline-flex items-center px-2 py-1 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+{% endif %}
