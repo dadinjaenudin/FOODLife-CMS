@@ -15,15 +15,17 @@
         </div>
     </div>
     
-    <!-- Brand Selection (only for create) -->
+    <!-- Brand Selection (only for create) - v2.0 -->
     {% if store %}
-    <!-- Edit mode: Show brand info (read-only) -->
-    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+    <!-- Edit mode: Show brand info (read-only) - FIXED -->
+    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg mb-3">
         <div class="text-xs text-blue-800">
             <i class="fas fa-info-circle mr-1"></i>
-            <strong>Brand:</strong> {{ store.brand.name }} ({{ store.brand.company.name }})
+            <strong>Current Brand:</strong> {{ store.brand.name }} ({{ store.brand.company.name }})
         </div>
     </div>
+    <!-- Hidden field to maintain brand association -->
+    <input type="hidden" name="brand_id" value="{{ store.brand.id }}">
     {% else %}
     <!-- Create mode: Show brand dropdown -->
     <div>
@@ -212,6 +214,18 @@
         </button>
     </div>
 </form>
+
+{% if store %}
+<script>
+console.log('=== STORE EDIT MODE DEBUG ===');
+console.log('Store exists:', {{ store|yesno:"true,false" }});
+console.log('Store code:', '{{ store.store_code }}');
+console.log('Store name:', '{{ store.store_name }}');
+console.log('Brand name:', '{{ store.brand.name }}');
+console.log('Company name:', '{{ store.brand.company.name }}');
+console.log('=== END DEBUG ===');
+</script>
+{% endif %}
 
 <script>
     document.body.addEventListener('htmx:afterRequest', function(evt) {
