@@ -1,6 +1,151 @@
-<!-- Promotion Table - Placeholder -->
-<div class="text-center py-8">
-    <i class="fas fa-gift text-4xl text-gray-300 mb-3"></i>
-    <p class="text-sm text-gray-600">Promotion table - Under construction</p>
-    <p class="text-xs text-gray-500 mt-1">Backend ready, UI will be completed soon</p>
+<!-- Ultra-Compact Promotion Table -->
+<div class="overflow-x-auto">
+    <table class="min-w-full border-collapse border border-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Code</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Promotion Name</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Type</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Discount</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Period</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Status</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white">
+            {% for promotion in promotions %}
+            <tr class="hover:bg-gray-50">
+                <!-- Code -->
+                <td class="px-3 py-2 text-xs text-gray-900 border border-gray-200">
+                    <div class="font-mono font-semibold">{{ promotion.code }}</div>
+                </td>
+                
+                <!-- Promotion Name & Company -->
+                <td class="px-3 py-2 text-xs text-gray-900 border border-gray-200">
+                    <div class="font-semibold">{{ promotion.name }}</div>
+                    <div class="text-gray-500">{{ promotion.company.name }}</div>
+                </td>
+                
+                <!-- Type -->
+                <td class="px-3 py-2 text-xs border border-gray-200">
+                    {% if promotion.promo_type == 'percent_discount' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">% Discount</span>
+                    {% elif promotion.promo_type == 'amount_discount' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">Amount Off</span>
+                    {% elif promotion.promo_type == 'buy_x_get_y' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">BOGO</span>
+                    {% elif promotion.promo_type == 'cashback' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-pink-100 text-pink-800">Cashback</span>
+                    {% elif promotion.promo_type == 'happy_hour' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Happy Hour</span>
+                    {% elif promotion.promo_type == 'combo' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">Combo</span>
+                    {% elif promotion.promo_type == 'payment_discount' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-teal-100 text-teal-800">Payment</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">{{ promotion.get_promo_type_display }}</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Discount -->
+                <td class="px-3 py-2 text-xs border border-gray-200">
+                    {% if promotion.discount_percent > 0 %}
+                        <div class="font-semibold text-green-600">{{ promotion.discount_percent }}%</div>
+                    {% endif %}
+                    {% if promotion.discount_amount > 0 %}
+                        <div class="font-semibold text-green-600">Rp {{ promotion.discount_amount|floatformat:0 }}</div>
+                    {% endif %}
+                    {% if promotion.max_discount_amount %}
+                        <div class="text-gray-500">Max: Rp {{ promotion.max_discount_amount|floatformat:0 }}</div>
+                    {% endif %}
+                    {% if promotion.min_purchase > 0 %}
+                        <div class="text-gray-500">Min: Rp {{ promotion.min_purchase|floatformat:0 }}</div>
+                    {% endif %}
+                </td>
+                
+                <!-- Period -->
+                <td class="px-3 py-2 text-xs text-gray-600 border border-gray-200">
+                    <div>{{ promotion.start_date|date:"d M Y" }}</div>
+                    <div>{{ promotion.end_date|date:"d M Y" }}</div>
+                </td>
+                
+                <!-- Status -->
+                <td class="px-3 py-2 text-center border border-gray-200">
+                    {% if promotion.is_active %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Actions -->
+                <td class="px-3 py-2 text-center border border-gray-200">
+                    <div class="flex items-center justify-center gap-2">
+                        <button
+                            @click="modalTitle = 'Edit Promotion'; modalUrl = '{% url 'promotion:edit' promotion.pk %}'; showModal = true"
+                            class="text-blue-600 hover:text-blue-800"
+                            title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                        <button
+                            @click="deleteUrl = '{% url 'promotion:delete' promotion.pk %}'; deleteItem = '{{ promotion.name }}'; showDeleteConfirm = true"
+                            class="text-red-600 hover:text-red-800"
+                            title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500 border border-gray-200">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-12 h-12 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                        </svg>
+                        <p class="text-sm">No promotions found</p>
+                        <p class="text-xs text-gray-400">Click "Add Promotion" to create your first promotion</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+    <div class="text-sm text-gray-700">
+        Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} total promotions)
+    </div>
+    <div class="flex gap-1">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.company %}&company={{ request.GET.company }}{% endif %}{% if request.GET.promo_type %}&promo_type={{ request.GET.promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.company %}&company={{ request.GET.company }}{% endif %}{% if request.GET.promo_type %}&promo_type={{ request.GET.promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Previous</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="px-3 py-1 text-sm text-white bg-blue-600 border border-blue-600 rounded">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.company %}&company={{ request.GET.company }}{% endif %}{% if request.GET.promo_type %}&promo_type={{ request.GET.promo_type }}{% endif %}"
+                   class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.company %}&company={{ request.GET.company }}{% endif %}{% if request.GET.promo_type %}&promo_type={{ request.GET.promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.company %}&company={{ request.GET.company }}{% endif %}{% if request.GET.promo_type %}&promo_type={{ request.GET.promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Last</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

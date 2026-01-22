@@ -77,7 +77,7 @@ def promotion_create(request):
             discount_percent = request.POST.get('discount_percent', '0')
             discount_amount = request.POST.get('discount_amount', '0')
             min_purchase = request.POST.get('min_purchase', '0')
-            max_discount = request.POST.get('max_discount', '0')
+            max_discount_amount = request.POST.get('max_discount_amount', '') or None
             start_date = request.POST.get('start_date', '').strip()
             end_date = request.POST.get('end_date', '').strip()
             is_active = request.POST.get('is_active') == 'on'
@@ -105,10 +105,11 @@ def promotion_create(request):
                 discount_percent=discount_percent,
                 discount_amount=discount_amount,
                 min_purchase=min_purchase,
-                max_discount=max_discount,
+                max_discount_amount=max_discount_amount,
                 start_date=start_date if start_date else None,
                 end_date=end_date if end_date else None,
-                is_active=is_active
+                is_active=is_active,
+                created_by=request.user
             )
             
             messages.success(request, f'Promotion "{promotion.name}" created successfully!')
@@ -147,7 +148,7 @@ def promotion_update(request, pk):
             discount_percent = request.POST.get('discount_percent', '0')
             discount_amount = request.POST.get('discount_amount', '0')
             min_purchase = request.POST.get('min_purchase', '0')
-            max_discount = request.POST.get('max_discount', '0')
+            max_discount_amount = request.POST.get('max_discount_amount', '') or None
             start_date = request.POST.get('start_date', '').strip()
             end_date = request.POST.get('end_date', '').strip()
             is_active = request.POST.get('is_active') == 'on'
@@ -173,7 +174,7 @@ def promotion_update(request, pk):
             promotion.discount_percent = discount_percent
             promotion.discount_amount = discount_amount
             promotion.min_purchase = min_purchase
-            promotion.max_discount = max_discount
+            promotion.max_discount_amount = max_discount_amount
             promotion.start_date = start_date if start_date else None
             promotion.end_date = end_date if end_date else None
             promotion.is_active = is_active

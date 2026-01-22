@@ -1,6 +1,277 @@
-<!-- Promotion Form - Placeholder -->
-<div class="text-center py-8">
-    <i class="fas fa-gift text-4xl text-gray-300 mb-3"></i>
-    <p class="text-sm text-gray-600">Promotion form - Under construction</p>
-    <p class="text-xs text-gray-500 mt-1">Backend ready, UI will be completed soon</p>
-</div>
+<!-- Promotion Form -->
+<form 
+    hx-post="{% if promotion %}{% url 'promotion:edit' promotion.pk %}{% else %}{% url 'promotion:create' %}{% endif %}"
+    hx-target="#modal-content"
+    hx-swap="innerHTML"
+    class="space-y-4"
+    x-data="{ submitting: false }"
+    @submit="submitting = true">
+    {% csrf_token %}
+    
+    <!-- Error Container -->
+    <div id="form-errors" class="hidden p-3 text-sm text-red-700 bg-red-100 border border-red-400 rounded" role="alert"></div>
+    
+    <!-- Company (Read-only when editing) -->
+    {% if promotion %}
+        <div>
+            <label class="block mb-1 text-sm font-medium text-gray-700">Company</label>
+            <div class="px-3 py-2 text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-lg">
+                {{ promotion.company.name }}
+            </div>
+            <input type="hidden" name="company_id" value="{{ promotion.company.id }}">
+        </div>
+    {% else %}
+        <div>
+            <label for="company_id" class="block mb-1 text-sm font-medium text-gray-700">
+                Company <span class="text-red-500">*</span>
+            </label>
+            <select 
+                id="company_id" 
+                name="company_id" 
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">-- Select Company --</option>
+                {% for company in companies %}
+                    <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    {% endif %}
+    
+    <!-- Promotion Name -->
+    <div>
+        <label for="name" class="block mb-1 text-sm font-medium text-gray-700">
+            Promotion Name <span class="text-red-500">*</span>
+        </label>
+        <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            value="{{ promotion.name|default:'' }}"
+            required
+            maxlength="200"
+            placeholder="e.g., New Year Mega Sale, Buy 1 Get 1 Coffee"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+    </div>
+    
+    <!-- Code -->
+    <div>
+        <label for="code" class="block mb-1 text-sm font-medium text-gray-700">
+            Promotion Code <span class="text-red-500">*</span>
+        </label>
+        <input 
+            type="text" 
+            id="code" 
+            name="code" 
+            value="{{ promotion.code|default:'' }}"
+            required
+            maxlength="50"
+            placeholder="e.g., NEWYEAR2026, BOGO-COFFEE"
+            class="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase">
+    </div>
+    
+    <!-- Promo Type -->
+    <div>
+        <label for="promo_type" class="block mb-1 text-sm font-medium text-gray-700">
+            Promotion Type <span class="text-red-500">*</span>
+        </label>
+        <select 
+            id="promo_type" 
+            name="promo_type" 
+            required
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">-- Select Type --</option>
+            <option value="percent_discount" {% if promotion.promo_type == 'percent_discount' %}selected{% endif %}>Percent Discount</option>
+            <option value="amount_discount" {% if promotion.promo_type == 'amount_discount' %}selected{% endif %}>Amount Discount</option>
+            <option value="buy_x_get_y" {% if promotion.promo_type == 'buy_x_get_y' %}selected{% endif %}>Buy X Get Y (BOGO)</option>
+            <option value="cashback" {% if promotion.promo_type == 'cashback' %}selected{% endif %}>Cashback</option>
+            <option value="happy_hour" {% if promotion.promo_type == 'happy_hour' %}selected{% endif %}>Happy Hour</option>
+            <option value="combo" {% if promotion.promo_type == 'combo' %}selected{% endif %}>Combo Deal</option>
+            <option value="payment_discount" {% if promotion.promo_type == 'payment_discount' %}selected{% endif %}>Payment Method Discount</option>
+            <option value="free_item" {% if promotion.promo_type == 'free_item' %}selected{% endif %}>Free Item</option>
+            <option value="package" {% if promotion.promo_type == 'package' %}selected{% endif %}>Package/Set Menu</option>
+            <option value="mix_match" {% if promotion.promo_type == 'mix_match' %}selected{% endif %}>Mix & Match</option>
+            <option value="upsell" {% if promotion.promo_type == 'upsell' %}selected{% endif %}>Upsell/Add-on</option>
+            <option value="threshold_tier" {% if promotion.promo_type == 'threshold_tier' %}selected{% endif %}>Threshold/Tiered</option>
+        </select>
+        <p class="mt-1 text-xs text-gray-500">Choose the type of promotion you want to create</p>
+    </div>
+    
+    <!-- Discount Configuration -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- Discount Percent -->
+        <div>
+            <label for="discount_percent" class="block mb-1 text-sm font-medium text-gray-700">
+                Discount (%)
+            </label>
+            <input 
+                type="number" 
+                id="discount_percent" 
+                name="discount_percent" 
+                value="{{ promotion.discount_percent|default:0 }}"
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="0"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">e.g., 10, 20, 50</p>
+        </div>
+        
+        <!-- Discount Amount -->
+        <div>
+            <label for="discount_amount" class="block mb-1 text-sm font-medium text-gray-700">
+                Discount (Rp)
+            </label>
+            <input 
+                type="number" 
+                id="discount_amount" 
+                name="discount_amount" 
+                value="{{ promotion.discount_amount|default:0 }}"
+                min="0"
+                step="1"
+                placeholder="0"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">e.g., 10000, 50000</p>
+        </div>
+    </div>
+    
+    <!-- Min Purchase & Max Discount -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- Min Purchase -->
+        <div>
+            <label for="min_purchase" class="block mb-1 text-sm font-medium text-gray-700">
+                Min Purchase (Rp)
+            </label>
+            <input 
+                type="number" 
+                id="min_purchase" 
+                name="min_purchase" 
+                value="{{ promotion.min_purchase|default:0 }}"
+                min="0"
+                step="1"
+                placeholder="0"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">Minimum purchase required</p>
+        </div>
+        
+        <!-- Max Discount -->
+        <div>
+            <label for="max_discount_amount" class="block mb-1 text-sm font-medium text-gray-700">
+                Max Discount (Rp)
+            </label>
+            <input 
+                type="number" 
+                id="max_discount_amount" 
+                name="max_discount_amount" 
+                value="{{ promotion.max_discount_amount|default:'' }}"
+                min="0"
+                step="1"
+                placeholder="Optional"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">Cap the maximum discount</p>
+        </div>
+    </div>
+    
+    <!-- Date Range -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- Start Date -->
+        <div>
+            <label for="start_date" class="block mb-1 text-sm font-medium text-gray-700">
+                Start Date <span class="text-red-500">*</span>
+            </label>
+            <input 
+                type="date" 
+                id="start_date" 
+                name="start_date" 
+                value="{{ promotion.start_date|date:'Y-m-d'|default:'' }}"
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+        
+        <!-- End Date -->
+        <div>
+            <label for="end_date" class="block mb-1 text-sm font-medium text-gray-700">
+                End Date <span class="text-red-500">*</span>
+            </label>
+            <input 
+                type="date" 
+                id="end_date" 
+                name="end_date" 
+                value="{{ promotion.end_date|date:'Y-m-d'|default:'' }}"
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+    </div>
+    
+    <!-- Description -->
+    <div>
+        <label for="description" class="block mb-1 text-sm font-medium text-gray-700">
+            Description
+        </label>
+        <textarea 
+            id="description" 
+            name="description" 
+            rows="3"
+            placeholder="Describe the promotion details..."
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ promotion.description|default:'' }}</textarea>
+    </div>
+    
+    <!-- Active Status -->
+    <div class="flex items-center">
+        <input 
+            type="checkbox" 
+            id="is_active" 
+            name="is_active" 
+            value="1"
+            {% if not promotion or promotion.is_active %}checked{% endif %}
+            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+        <label for="is_active" class="ml-2 text-sm font-medium text-gray-700">
+            Active (promotion is available for use)
+        </label>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="flex justify-end gap-2 pt-4 border-t">
+        <button 
+            type="button"
+            @click="$dispatch('close-modal')"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+        </button>
+        <button 
+            type="submit"
+            :disabled="submitting"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!submitting">{% if promotion %}Update{% else %}Create{% endif %}</span>
+            <span x-show="submitting" class="flex items-center">
+                <svg class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+            </span>
+        </button>
+    </div>
+</form>
+
+<script>
+// Handle form submission response
+document.getElementById('modal-content').addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful) {
+        const response = JSON.parse(event.detail.xhr.response);
+        if (response.success) {
+            // Close modal
+            document.dispatchEvent(new CustomEvent('close-modal'));
+            // Trigger table refresh
+            htmx.trigger('#promotion-table', 'refresh');
+            // Show success message
+            window.showToast(response.message, 'success');
+        } else {
+            // Show error in form
+            const errorDiv = document.getElementById('form-errors');
+            errorDiv.textContent = response.message;
+            errorDiv.classList.remove('hidden');
+        }
+    }
+});
+</script>

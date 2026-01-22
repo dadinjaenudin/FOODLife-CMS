@@ -45,46 +45,48 @@
 
     <!-- Filters - Compact -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'promotion:list' %}" hx-target="#promotion-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#brand-filter, change from:#brand-filter">
+        <form method="get" class="flex gap-2" hx-get="{% url 'promotion:list' %}" hx-target="#promotion-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#company-filter, change from:#promo-type-filter">
             <div class="flex-1 relative">
                 <input 
                     type="text" 
                     name="search" 
                     id="search-input"
                     value="{{ search }}"
-                    placeholder="Search by code, name, or address..."
+                    placeholder="Search by code, name, or description..."
                     class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
             </div>
             
             <select 
-                name="brand" 
-                id="brand-filter"
+                name="company_id" 
+                id="company-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">All Companies</option>
-                {% for brand in companies %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
-                    {{ brand.name }}
+                {% for company in companies %}
+                <option value="{{ company.id }}" {% if company.id|stringformat:"s" == company_id %}selected{% endif %}>
+                    {{ company.name }}
                 </option>
                 {% endfor %}
             </select>
             
             <select 
-                name="brand" 
-                id="brand-filter"
+                name="promo_type" 
+                id="promo-type-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Brands</option>
-                {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
-                    {{ brand.name }}
-                </option>
-                {% endfor %}
+                <option value="">All Types</option>
+                <option value="percent_discount" {% if promo_type == 'percent_discount' %}selected{% endif %}>Percent Discount</option>
+                <option value="amount_discount" {% if promo_type == 'amount_discount' %}selected{% endif %}>Amount Discount</option>
+                <option value="buy_x_get_y" {% if promo_type == 'buy_x_get_y' %}selected{% endif %}>BOGO</option>
+                <option value="cashback" {% if promo_type == 'cashback' %}selected{% endif %}>Cashback</option>
+                <option value="happy_hour" {% if promo_type == 'happy_hour' %}selected{% endif %}>Happy Hour</option>
+                <option value="combo" {% if promo_type == 'combo' %}selected{% endif %}>Combo</option>
+                <option value="payment_discount" {% if promo_type == 'payment_discount' %}selected{% endif %}>Payment</option>
             </select>
             
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or selected_brand or selected_brand %}
+            {% if search or company_id or promo_type %}
             <a href="{% url 'promotion:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
