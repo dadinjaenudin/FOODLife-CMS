@@ -1,0 +1,45 @@
+# Django Core
+Django==5.0.1
+django-environ==0.11.2
+psycopg2-binary==2.9.9
+
+# Django REST Framework
+djangorestframework==3.14.0
+django-filter==23.5
+
+# Authentication & Security
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.3.1
+
+# Celery & Redis
+celery==5.3.4
+redis==5.0.1
+django-redis==5.4.0
+
+# Image handling
+Pillow==10.2.0
+
+# Admin enhancements
+django-import-export==3.3.5
+
+# Development
+django-extensions==3.2.3
+ipython==8.20.0
+
+# Testing
+pytest==7.4.4
+pytest-django==4.7.0
+factory-boy==3.3.0
+
+# Code quality
+black==23.12.1
+flake8==7.0.0
+isort==5.13.2
+
+# Production
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
