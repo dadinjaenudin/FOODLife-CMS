@@ -3,11 +3,13 @@
     <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
             <tr>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product Name</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parent Product / Company</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
-                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Location</th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Image</th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">SKU / Name</th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category / Brand</th>
+                <th scope="col" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Price</th>
+                <th scope="col" class="px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Cost</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Printer</th>
+                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock</th>
                 <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                 <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
             </tr>
@@ -16,37 +18,60 @@
             {% for product in products %}
             <tr class="hover:bg-gray-50 transition">
                 <td class="px-3 py-2 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center mr-2">
-                            <i class="fas fa-product text-purple-600 text-xs"></i>
-                        </div>
-                        <span class="text-xs font-semibold text-gray-900">{{ product.product_code }}</span>
+                    {% if product.photos.all %}
+                        {% with product.photos.all|first as photo %}
+                        <img src="{{ photo.photo.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
+                        {% endwith %}
+                    {% else %}
+                    <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">
+                        <i class="fas fa-image text-gray-400 text-lg"></i>
                     </div>
+                    {% endif %}
                 </td>
                 <td class="px-3 py-2">
-                    <div class="text-xs font-medium text-gray-900">{{ product.product_name }}</div>
-                    <div class="text-xs text-gray-500">{{ product.timezone }}</div>
+                    <div class="text-xs font-semibold text-gray-900">{{ product.sku }}</div>
+                    <div class="text-xs font-medium text-gray-700">{{ product.name }}</div>
+                    {% if product.description %}
+                    <div class="text-xs text-gray-500 truncate max-w-xs mt-0.5">{{ product.description|truncatewords:8 }}</div>
+                    {% endif %}
                 </td>
                 <td class="px-3 py-2">
-                    <div class="text-xs text-gray-900">{{ product.parent.name }}</div>
-                    <div class="text-xs text-gray-500">{{ product.parent.company.name }}</div>
+                    <div class="text-xs text-gray-900">{{ product.category.name }}</div>
+                    <div class="text-xs text-gray-500">{{ product.brand.name }}</div>
                 </td>
-                <td class="px-3 py-2">
-                    <div class="text-xs text-gray-900">
-                        <i class="fas fa-phone text-xs mr-1"></i>{{ product.phone }}
-                    </div>
-                    <div class="text-xs text-gray-500 truncate max-w-xs">
-                        <i class="fas fa-map-marker-alt text-xs mr-1"></i>{{ product.address|truncatewords:5 }}
-                    </div>
+                <td class="px-3 py-2 text-right">
+                    <div class="text-xs font-semibold text-gray-900">Rp {{ product.price|floatformat:0 }}</div>
+                    {% if product.cost %}
+                    {% widthratio product.price|add:"-"|add:product.cost product.price 100 as margin %}
+                    <div class="text-xs text-green-600">Margin: {{ margin }}%</div>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-right">
+                    <div class="text-xs text-gray-700">Rp {{ product.cost|floatformat:0 }}</div>
                 </td>
                 <td class="px-3 py-2 text-center">
-                    {% if product.latitude and product.longitude %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title="Lat: {{ product.latitude }}, Lng: {{ product.longitude }}">
-                        <i class="fas fa-map-marked-alt text-xs mr-1"></i> GPS
+                    {% if product.printer_target == 'kitchen' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                        <i class="fas fa-fire-burner text-xs mr-1"></i> Kitchen
+                    </span>
+                    {% elif product.printer_target == 'bar' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        <i class="fas fa-glass-martini-alt text-xs mr-1"></i> Bar
+                    </span>
+                    {% elif product.printer_target == 'dessert' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">
+                        <i class="fas fa-ice-cream text-xs mr-1"></i> Dessert
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 text-center">
+                    {% if product.track_stock %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800" title="Stock Tracking Enabled">
+                        {{ product.stock_quantity|floatformat:0 }}
                     </span>
                     {% else %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                        <i class="fas fa-map text-xs mr-1"></i> No GPS
+                        <i class="fas fa-infinity text-xs"></i>
                     </span>
                     {% endif %}
                 </td>
@@ -70,33 +95,21 @@
                             <i class="fas fa-edit text-xs"></i>
                         </button>
                         <button 
-                            @click="showDeleteConfirm = true; deleteUrl = '{% url "product:delete" product.pk %}'; deleteItem = '{{ product.product_name }}'"
+                            @click="showDeleteConfirm = true; deleteUrl = '{% url "product:delete" product.pk %}'; deleteItem = '{{ product.name }}'"
                             class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                             title="Delete">
                             <i class="fas fa-trash text-xs"></i>
                         </button>
-                        {% if product.latitude and product.longitude %}
-                        <a href="https://www.google.com/maps?q={{ product.latitude }},{{ product.longitude }}" 
-                           target="_blank"
-                           class="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
-                           title="View on Map">
-                            <i class="fas fa-map-marked-alt text-xs"></i>
-                        </a>
-                        {% endif %}
                     </div>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" class="px-3 py-8 text-center">
-                    <div class="flex flex-col items-center justify-center text-gray-500">
-                        <i class="fas fa-product text-3xl mb-2 text-gray-300"></i>
-                        <p class="text-sm font-medium">No products found</p>
-                        {% if search %}
-                        <p class="text-xs mt-1">Try adjusting your search terms</p>
-                        {% else %}
-                        <p class="text-xs mt-1">Click "Add Product" to create your first product</p>
-                        {% endif %}
+                <td colspan="9" class="px-3 py-8 text-center">
+                    <div class="flex flex-col items-center justify-center text-gray-400">
+                        <i class="fas fa-box-open text-4xl mb-3"></i>
+                        <p class="text-sm font-medium text-gray-500">No products found</p>
+                        <p class="text-xs text-gray-400 mt-1">Click "Add Product" to create your first product</p>
                     </div>
                 </td>
             </tr>
@@ -107,49 +120,51 @@
 
 <!-- Pagination -->
 {% if products.has_other_pages %}
-<div class="bg-gray-50 px-3 py-2 border-t border-gray-200">
-    <div class="flex items-center justify-between">
-        <div class="text-xs text-gray-600">
-            Showing <span class="font-semibold">{{ products.start_index }}</span> to 
-            <span class="font-semibold">{{ products.end_index }}</span> of 
-            <span class="font-semibold">{{ total_count }}</span> results
+<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+    <div class="flex-1 flex justify-between sm:hidden">
+        {% if products.has_previous %}
+        <a href="?page={{ products.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Previous
+        </a>
+        {% endif %}
+        {% if products.has_next %}
+        <a href="?page={{ products.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Next
+        </a>
+        {% endif %}
+    </div>
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-xs text-gray-700">
+                Showing page <span class="font-medium">{{ products.number }}</span> of <span class="font-medium">{{ products.paginator.num_pages }}</span>
+                <span class="text-gray-500">({{ products.paginator.count }} total products)</span>
+            </p>
         </div>
-        
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-            {% if products.has_previous %}
-            <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}" 
-               hx-get="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-target="#product-table"
-               class="relative inline-flex items-center px-2 py-1 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
-                <i class="fas fa-angle-double-left"></i>
-            </a>
-            <a href="?page={{ products.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-get="?page={{ products.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-target="#product-table"
-               class="relative inline-flex items-center px-2 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
-                <i class="fas fa-angle-left"></i>
-            </a>
-            {% endif %}
-            
-            <span class="relative inline-flex items-center px-3 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-700">
-                Page {{ products.number }} of {{ products.paginator.num_pages }}
-            </span>
-            
-            {% if products.has_next %}
-            <a href="?page={{ products.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-get="?page={{ products.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-target="#product-table"
-               class="relative inline-flex items-center px-2 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
-                <i class="fas fa-angle-right"></i>
-            </a>
-            <a href="?page={{ products.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-get="?page={{ products.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_company %}&company={{ selected_company }}{% endif %}{% if selected_parent %}&parent={{ selected_parent }}{% endif %}"
-               hx-target="#product-table"
-               class="relative inline-flex items-center px-2 py-1 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
-                <i class="fas fa-angle-double-right"></i>
-            </a>
-            {% endif %}
-        </nav>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {% if products.has_previous %}
+                <a href="?page=1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+                <a href="?page={{ products.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+                {% endif %}
+                
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-700">
+                    {{ products.number }}
+                </span>
+                
+                {% if products.has_next %}
+                <a href="?page={{ products.next_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ products.paginator.num_pages }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
     </div>
 </div>
 {% endif %}
