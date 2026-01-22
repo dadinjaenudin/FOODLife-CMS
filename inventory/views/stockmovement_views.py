@@ -49,7 +49,7 @@ def stockmovement_list(request):
     movements_page = paginator.get_page(page)
     
     # Get stores for filter
-    stores = Store.objects.filter(is_active=True).select_related('brand').order_by('name')
+    stores = Store.objects.filter(is_active=True).select_related('brand').order_by('store_name')
     
     if request.headers.get('HX-Request'):
         return render(request, 'inventory/stockmovement/_table.html', {
