@@ -1,0 +1,244 @@
+<!-- Dashboard -->
+<div x-data="{ expanded: true }">
+    <a href="{% url 'dashboard:index' %}" 
+       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 {% if request.resolver_match.url_name == 'index' %}bg-blue-700{% endif %}">
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-chart-line w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Dashboard</span>
+        </div>
+    </a>
+</div>
+
+<!-- Master Data (Level 1) -->
+<div x-data="{ expanded: false }" class="mt-2">
+    <button 
+        @click="expanded = !expanded"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-database w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Master Data</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
+        <!-- Company Management -->
+        <a href="{% url 'core:company-list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-building w-5"></i>
+            <span>Company</span>
+        </a>
+        
+        <!-- Brand & Store (Level 2 with submenu) -->
+        <div x-data="{ subExpanded: false }">
+            <button 
+                @click="subExpanded = !subExpanded"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-store w-5"></i>
+                    <span>Brand & Store</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'core:brand-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-tag w-4"></i>
+                    <span>Brand List</span>
+                </a>
+                <a href="{% url 'core:store-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-shop w-4"></i>
+                    <span>Store List</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Product Catalog (Level 2 with submenu) -->
+        <div x-data="{ subExpanded: false }">
+            <button 
+                @click="subExpanded = !subExpanded"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-box w-5"></i>
+                    <span>Product Catalog</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'products:category-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-list w-4"></i>
+                    <span>Categories</span>
+                </a>
+                <a href="{% url 'products:product-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-pizza-slice w-4"></i>
+                    <span>Products</span>
+                </a>
+                <a href="{% url 'products:modifier-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-sliders w-4"></i>
+                    <span>Modifiers</span>
+                </a>
+                <a href="{% url 'products:table-area-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-map-marker-alt w-4"></i>
+                    <span>Table Areas</span>
+                </a>
+                <a href="{% url 'products:kitchen-station-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-fire-burner w-4"></i>
+                    <span>Kitchen Stations</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Members -->
+        <a href="{% url 'members:member-list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-users w-5"></i>
+            <span>Members</span>
+        </a>
+        
+        <!-- Promotions -->
+        <div x-data="{ subExpanded: false }">
+            <button 
+                @click="subExpanded = !subExpanded"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-gift w-5"></i>
+                    <span>Promotions</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'promotions:promotion-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-percent w-4"></i>
+                    <span>All Promotions</span>
+                </a>
+                <a href="{% url 'promotions:tier-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-layer-group w-4"></i>
+                    <span>Member Tiers</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Inventory -->
+        <div x-data="{ subExpanded: false }">
+            <button 
+                @click="subExpanded = !subExpanded"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-warehouse w-5"></i>
+                    <span>Inventory</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'inventory:material-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-boxes w-4"></i>
+                    <span>Raw Materials</span>
+                </a>
+                <a href="{% url 'inventory:recipe-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-book w-4"></i>
+                    <span>Recipes (BOM)</span>
+                </a>
+                <a href="{% url 'inventory:movement-list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-exchange-alt w-4"></i>
+                    <span>Stock Movements</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reports & Analytics (Level 1) -->
+<div x-data="{ expanded: false }" class="mt-2">
+    <button 
+        @click="expanded = !expanded"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-chart-bar w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Reports & Analytics</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
+        <a href="{% url 'analytics:daily-sales' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-cash-register w-5"></i>
+            <span>Sales Report</span>
+        </a>
+        <a href="{% url 'analytics:product-sales' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-shopping-cart w-5"></i>
+            <span>Product Performance</span>
+        </a>
+        <a href="{% url 'analytics:member-analytics' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-user-chart w-5"></i>
+            <span>Member Analytics</span>
+        </a>
+        <a href="{% url 'analytics:promotion-performance' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-tags w-5"></i>
+            <span>Promotion Analysis</span>
+        </a>
+        <a href="{% url 'analytics:inventory-cogs' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-calculator w-5"></i>
+            <span>Inventory & COGS</span>
+        </a>
+    </div>
+</div>
+
+<!-- User Management -->
+<div class="mt-2">
+    <a href="{% url 'core:user-list' %}" 
+       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700">
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-user-cog w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">User Management</span>
+        </div>
+    </a>
+</div>
+
+<!-- Settings -->
+<div class="mt-2">
+    <a href="{% url 'core:settings' %}" 
+       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700">
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-cog w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Settings</span>
+        </div>
+    </a>
+</div>

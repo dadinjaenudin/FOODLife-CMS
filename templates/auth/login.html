@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - F&B HO Management</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="h-full">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="max-w-md w-full space-y-8">
+            <!-- Logo & Title -->
+            <div class="text-center">
+                <div class="flex justify-center mb-4">
+                    <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-utensils text-white text-3xl"></i>
+                    </div>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900">
+                    F&B Head Office
+                </h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    Sign in to your account
+                </p>
+            </div>
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="space-y-2">
+                {% for message in messages %}
+                <div class="bg-{{ message.tags }}-50 border border-{{ message.tags }}-200 text-{{ message.tags }}-800 px-4 py-3 rounded-lg text-sm" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Login Form -->
+            <div class="bg-white py-8 px-6 shadow-xl rounded-2xl">
+                <form 
+                    method="POST" 
+                    action="{% url 'auth:login' %}"
+                    hx-post="{% url 'auth:login' %}"
+                    hx-target="#login-form"
+                    hx-swap="outerHTML"
+                    class="space-y-6"
+                    id="login-form"
+                    x-data="{ loading: false }"
+                    @submit="loading = true"
+                >
+                    {% csrf_token %}
+                    
+                    <!-- Username -->
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-2 text-gray-400"></i>
+                            Username
+                        </label>
+                        <input 
+                            id="username" 
+                            name="username" 
+                            type="text" 
+                            autocomplete="username" 
+                            required 
+                            class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="Enter your username"
+                        >
+                    </div>
+                    
+                    <!-- Password -->
+                    <div x-data="{ showPassword: false }">
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-2 text-gray-400"></i>
+                            Password
+                        </label>
+                        <div class="relative">
+                            <input 
+                                id="password" 
+                                name="password" 
+                                :type="showPassword ? 'text' : 'password'" 
+                                autocomplete="current-password" 
+                                required 
+                                class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-12"
+                                placeholder="Enter your password"
+                            >
+                            <button 
+                                type="button"
+                                @click="showPassword = !showPassword"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Remember Me & Forgot Password -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input 
+                                id="remember-me" 
+                                name="remember-me" 
+                                type="checkbox" 
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            >
+                            <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+                                Remember me
+                            </label>
+                        </div>
+                        
+                        <div class="text-sm">
+                            <a href="#" class="font-medium text-blue-600 hover:text-blue-500">
+                                Forgot password?
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div>
+                        <button 
+                            type="submit" 
+                            class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-lg"
+                            :disabled="loading"
+                        >
+                            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                                <i class="fas fa-sign-in-alt text-blue-300"></i>
+                            </span>
+                            <span x-show="!loading">Sign in</span>
+                            <span x-show="loading" class="flex items-center">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Signing in...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-sm text-gray-600">
+                <p>&copy; 2024 F&B Head Office Management System</p>
+                <p class="mt-1">Version 1.0.0</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- HTMX Config -->
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
+</body>
+</html>

@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'import_export',
     'django_extensions',
+    'drf_spectacular',  # API Documentation
+    'django_htmx',      # HTMX integration
     
     # Local apps
     'core',           # Multi-tenant core (Company, Brand, Store, User)
@@ -53,12 +55,14 @@ INSTALLED_APPS = [
     'inventory',      # Inventory & Recipe management
     'transactions',   # Transaction data from Edge
     'analytics',      # Reporting & Analytics
+    'dashboard',      # Dashboard & UI
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files
-    'corsheaders.middleware.CorsMiddleware',       # CORS
+    'corsheaders.middleware.CorsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',  # HTMX       # CORS
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -208,6 +212,8 @@ REST_FRAMEWORK = {
     ),
     'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',
     'DATE_FORMAT': '%Y-%m-%d',
+    # API Documentation with drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT Configuration
@@ -336,3 +342,228 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+# ===================================================================
+# DRF-SPECTACULAR (API DOCUMENTATION) CONFIGURATION
+# ===================================================================
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'F&B POS HO System API',
+    'DESCRIPTION': '''
+# F&B POS Head Office API Documentation
+
+Multi-Tenant Cloud-Based Head Office System untuk F&B POS.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│         HO (Cloud - Django)             │
+│  ┌──────────────────────────────────┐  │
+│  │ Master Data Management           │  │
+│  │ - Company / Brand / Store        │  │
+│  │ - Products / Categories          │  │
+│  │ - Members / Loyalty              │  │
+│  │ - Promotions (12+ types)         │  │
+│  │ - Inventory / Recipes (BOM)      │  │
+│  └──────────────────────────────────┘  │
+│  ┌──────────────────────────────────┐  │
+│  │ REST API (JWT Auth)              │  │
+│  │ - HO → Edge: Master data pull    │  │
+│  │ - Edge → HO: Transaction push    │  │
+│  └──────────────────────────────────┘  │
+│  ┌──────────────────────────────────┐  │
+│  │ Analytics & Reporting            │  │
+│  │ - Daily sales, product analysis  │  │
+│  │ - Promotion performance          │  │
+│  │ - Member analytics, COGS         │  │
+│  └──────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+              ↕ REST API (HTTPS)
+┌─────────────────────────────────────────┐
+│   Edge Server (Per Store - Django)      │
+│  - POS UI (HTMX)                        │
+│  - Offline-first (LAN only)             │
+│  - Pull master data from HO (periodic)  │
+│  - Push transactions to HO (async)      │
+└─────────────────────────────────────────┘
+```
+
+## Authentication
+
+All API endpoints require JWT authentication:
+
+1. **Obtain Token**: `POST /api/token/`
+   ```json
+   {
+     "username": "your_username",
+     "password": "your_password"
+   }
+   ```
+   
+2. **Use Token**: Add header to requests:
+   ```
+   Authorization: Bearer <access_token>
+   ```
+
+3. **Refresh Token**: `POST /api/token/refresh/`
+   ```json
+   {
+     "refresh": "<refresh_token>"
+   }
+   ```
+
+## API Categories
+
+### 1. Core API - Multi-Tenant Master Data
+- Company, Brand, Store, User management
+- Base URL: `/api/v1/core/`
+
+### 2. Products API - Product Catalog
+- Categories, Products, Modifiers, Tables
+- Base URL: `/api/v1/products/`
+
+### 3. Members API - Loyalty Program (Bidirectional)
+- Member registration, lookup, transactions
+- Base URL: `/api/v1/members/`
+
+### 4. Promotions API - Promotion Engine
+- 12+ promotion types, vouchers, usage tracking
+- Base URL: `/api/v1/promotions/`
+
+### 5. Inventory API - Inventory & Recipe (BOM)
+- Inventory items, recipes with ingredients
+- Base URL: `/api/v1/inventory/`
+
+### 6. Transactions API - Transaction Push (Edge → HO)
+- Bills, payments, sessions, refunds
+- Base URL: `/api/v1/transactions/`
+
+### 7. Analytics API - Reporting & Analytics
+- Sales reports, product analysis, member analytics
+- Base URL: `/api/v1/analytics/`
+
+## Sync Workflow
+
+### Edge Startup Sync
+1. Obtain JWT token
+2. Pull company/brand/store data
+3. Pull users for brand
+4. Pull products, categories, modifiers
+5. Pull promotions (active only)
+6. Pull inventory items & recipes
+7. Pull members (company-wide)
+
+### Periodic Sync (Every 5 minutes)
+Use `last_sync` parameter for incremental sync:
+```
+GET /api/v1/products/products/sync/?brand_id=xxx&last_sync=2024-01-22T10:30:00Z
+```
+
+### Transaction Push (After bill paid / EOD)
+```
+POST /api/v1/transactions/bills/push/
+POST /api/v1/transactions/bulk-push/
+```
+
+## Response Format
+
+Standard success response:
+```json
+{
+  "count": 10,
+  "last_sync": "2024-01-22T12:00:00Z",
+  "data": [...]
+}
+```
+
+Standard error response:
+```json
+{
+  "error": "Error message",
+  "detail": "Detailed error information"
+}
+```
+
+## Common Query Parameters
+
+- `brand_id`: Filter by brand (UUID)
+- `store_id`: Filter by store (UUID)
+- `company_id`: Filter by company (UUID)
+- `last_sync`: ISO datetime for incremental sync
+- `start_date`: Date range start (YYYY-MM-DD)
+- `end_date`: Date range end (YYYY-MM-DD)
+
+## Rate Limiting
+
+- Default: 100 requests per minute per user
+- Bulk operations: 10 requests per minute
+
+## Support
+
+- Repository: https://github.com/dadinjaenudin/FoodBeverages-CMS
+- Documentation: See README.md
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'displayRequestDuration': True,
+        'filter': True,
+        'docExpansion': 'none',
+        'defaultModelsExpandDepth': 2,
+        'defaultModelExpandDepth': 2,
+    },
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Development server'},
+        {'url': 'https://api.yogyagroup.com', 'description': 'Production server'},
+    ],
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'JWT token management'},
+        {'name': 'Core', 'description': 'Multi-tenant core (Company, Brand, Store, User)'},
+        {'name': 'Products', 'description': 'Product catalog & table management'},
+        {'name': 'Members', 'description': 'Loyalty program (bidirectional sync)'},
+        {'name': 'Promotions', 'description': 'Promotion engine (12+ types)'},
+        {'name': 'Inventory', 'description': 'Inventory & recipe (BOM) management'},
+        {'name': 'Transactions', 'description': 'Transaction push (Edge → HO)'},
+        {'name': 'Analytics', 'description': 'Reporting & analytics'},
+    ],
+    'EXTERNAL_DOCS': {
+        'description': 'GitHub Repository',
+        'url': 'https://github.com/dadinjaenudin/FoodBeverages-CMS',
+    },
+    'CONTACT': {
+        'name': 'Yogya Group IT Team',
+        'email': 'info@yogyagroup.com',
+    },
+    'LICENSE': {
+        'name': 'Proprietary',
+    },
+    # Security schemes
+    'SECURITY': [{'Bearer': []}],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"'
+            }
+        }
+    },
+    # Preprocessing
+    'PREPROCESSING_HOOKS': [],
+    'POSTPROCESSING_HOOKS': [],
+    'SCHEMA_PATH_PREFIX': r'/api/v1/',
+    'ENUM_NAME_OVERRIDES': {},
+}
+
+
+# Authentication URLs
+LOGIN_URL = 'auth:login'
+LOGIN_REDIRECT_URL = 'dashboard:index'
+LOGOUT_REDIRECT_URL = 'auth:login'
+

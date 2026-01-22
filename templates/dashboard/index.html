@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - F&B HO Management{% endblock %}
+
+{% block breadcrumb %}
+<nav class="flex" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <span class="inline-flex items-center text-sm font-medium text-gray-700">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </span>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ request.user.get_full_name|default:request.user.username }}!</h1>
+    <p class="mt-2 text-gray-600">Here's what's happening with your business today.</p>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Stores -->
+    <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Total Stores</p>
+                <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_stores }}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-store text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Products -->
+    <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Total Products</p>
+                <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_products }}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-box text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Members -->
+    <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Total Members</p>
+                <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_members }}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-users text-purple-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Promotions -->
+    <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-orange-500 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Active Promotions</p>
+                <p class="text-3xl font-bold text-gray-900 mt-2">{{ active_promotions }}</p>
+            </div>
+            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-gift text-orange-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Overview (Last 30 Days) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Total Sales (30d)</h3>
+            <i class="fas fa-chart-line text-2xl opacity-75"></i>
+        </div>
+        <p class="text-4xl font-bold">Rp {{ recent_sales.total|default:0|floatformat:0 }}</p>
+        <p class="text-sm opacity-90 mt-2">{{ recent_sales.count|default:0 }} transactions</p>
+    </div>
+    
+    <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Average Transaction</h3>
+            <i class="fas fa-calculator text-2xl opacity-75"></i>
+        </div>
+        <p class="text-4xl font-bold">Rp {{ recent_sales.avg|default:0|floatformat:0 }}</p>
+        <p class="text-sm opacity-90 mt-2">Per transaction</p>
+    </div>
+    
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Growth Rate</h3>
+            <i class="fas fa-trending-up text-2xl opacity-75"></i>
+        </div>
+        <p class="text-4xl font-bold">+12.5%</p>
+        <p class="text-sm opacity-90 mt-2">vs last period</p>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Sales Chart -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Sales Trend (Last 7 Days)</h3>
+        <canvas id="salesChart" class="w-full" style="height: 250px;"></canvas>
+    </div>
+    
+    <!-- Product Sales Chart -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Selling Products</h3>
+        <canvas id="productChart" class="w-full" style="height: 250px;"></canvas>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Transactions -->
+    <div class="bg-white rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                {% for bill in recent_bills %}
+                <div class="flex items-center justify-between py-3 border-b last:border-b-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-receipt text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ bill.bill_number }}</p>
+                            <p class="text-xs text-gray-500">{{ bill.store.name }} • {{ bill.created_at|date:"M d, H:i" }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-semibold text-gray-900">Rp {{ bill.final_total|floatformat:0 }}</p>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            {{ bill.status }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-500 py-8">No recent transactions</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Members -->
+    <div class="bg-white rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">New Members</h3>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                {% for member in recent_members %}
+                <div class="flex items-center justify-between py-3 border-b last:border-b-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ member.name }}</p>
+                            <p class="text-xs text-gray-500">{{ member.email }} • {{ member.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            {{ member.tier.name|default:"Standard" }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-500 py-8">No new members</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sales Trend Chart
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Sales (Million IDR)',
+                data: [12, 19, 15, 25, 22, 30, 28],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Top Products Chart
+    const productCtx = document.getElementById('productChart').getContext('2d');
+    new Chart(productCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Nasi Goreng', 'Ayam Geprek', 'Es Teh', 'Mie Goreng', 'Juice'],
+            datasets: [{
+                label: 'Units Sold',
+                data: [450, 380, 520, 290, 310],
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

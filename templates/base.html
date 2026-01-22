@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}F&B HO Management{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js for dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Smooth transitions */
+        * {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Compact table styling */
+        .compact-table th,
+        .compact-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        /* Icon button styling */
+        .icon-btn {
+            @apply inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors;
+        }
+        
+        /* Sidebar animation */
+        .sidebar-enter {
+            animation: slideIn 0.2s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="h-full" x-data="{ 
+    sidebarOpen: true, 
+    sidebarCollapsed: false,
+    mobileSidebarOpen: false,
+    currentUser: '{{ request.user.get_full_name|default:request.user.username }}',
+    userRole: '{{ request.user.groups.first.name|default:"Staff" }}'
+}">
+    
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside 
+            x-show="sidebarOpen || mobileSidebarOpen"
+            x-cloak
+            :class="sidebarCollapsed ? 'w-16' : 'w-64'"
+            class="bg-gradient-to-b from-blue-900 to-blue-800 text-white fixed inset-y-0 left-0 z-50 overflow-y-auto sidebar-enter"
+            @click.away="mobileSidebarOpen = false"
+        >
+            <!-- Logo Header -->
+            <div class="flex items-center justify-between p-4 border-b border-blue-700">
+                <div x-show="!sidebarCollapsed" class="flex items-center space-x-3">
+                    <i class="fas fa-utensils text-2xl text-blue-300"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">F&B HO</h1>
+                        <p class="text-xs text-blue-300">Head Office</p>
+                    </div>
+                </div>
+                <button 
+                    @click="sidebarCollapsed = !sidebarCollapsed"
+                    class="hidden lg:block p-2 rounded hover:bg-blue-700"
+                >
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- User Info -->
+            <div x-show="!sidebarCollapsed" class="p-4 border-b border-blue-700">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate" x-text="currentUser"></p>
+                        <p class="text-xs text-blue-300 truncate" x-text="userRole"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="p-2 space-y-1">
+                {% include 'partials/sidebar_menu.html' %}
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <div 
+            :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'"
+            class="flex-1 flex flex-col min-h-screen"
+        >
+            <!-- Top Navbar -->
+            <header class="bg-white shadow-sm sticky top-0 z-40">
+                <div class="flex items-center justify-between px-4 py-3">
+                    <!-- Mobile menu button -->
+                    <button 
+                        @click="mobileSidebarOpen = !mobileSidebarOpen"
+                        class="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                    >
+                        <i class="fas fa-bars text-gray-600"></i>
+                    </button>
+                    
+                    <!-- Breadcrumb -->
+                    <div class="flex-1 px-4">
+                        {% block breadcrumb %}
+                        <nav class="flex" aria-label="Breadcrumb">
+                            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                                <li class="inline-flex items-center">
+                                    <a href="{% url 'dashboard:index' %}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                                        <i class="fas fa-home mr-2"></i>
+                                        Dashboard
+                                    </a>
+                                </li>
+                            </ol>
+                        </nav>
+                        {% endblock %}
+                    </div>
+                    
+                    <!-- Right side actions -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Notifications -->
+                        <button class="p-2 rounded-lg hover:bg-gray-100 relative">
+                            <i class="fas fa-bell text-gray-600"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        
+                        <!-- User Menu -->
+                        <div x-data="{ open: false }" class="relative">
+                            <button 
+                                @click="open = !open"
+                                class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100"
+                            >
+                                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm">
+                                    {{ request.user.get_full_name.0|default:request.user.username.0|upper }}
+                                </div>
+                                <i class="fas fa-chevron-down text-gray-600 text-xs"></i>
+                            </button>
+                            
+                            <div 
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 border"
+                            >
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user mr-2"></i> Profile
+                                </a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-cog mr-2"></i> Settings
+                                </a>
+                                <hr class="my-2">
+                                <a href="{% url 'auth:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page Content -->
+            <main class="flex-1 p-6">
+                <!-- Messages -->
+                {% if messages %}
+                <div class="mb-4 space-y-2">
+                    {% for message in messages %}
+                    <div class="bg-{{ message.tags }}-50 border border-{{ message.tags }}-200 text-{{ message.tags }}-800 px-4 py-3 rounded-lg flex items-center justify-between" role="alert">
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-{{ message.tags }}-600 hover:text-{{ message.tags }}-800">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% block content %}{% endblock %}
+            </main>
+            
+            <!-- Footer -->
+            <footer class="bg-white border-t px-6 py-4">
+                <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
+                    <p>&copy; 2024 F&B Head Office Management System. All rights reserved.</p>
+                    <p>Version 1.0.0</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- HTMX Config -->
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
