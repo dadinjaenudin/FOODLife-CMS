@@ -436,34 +436,12 @@ def upload_two_sheet_excel(request):
                                     brand_cache[brand_key] = brand
                                     log_entry['steps'].append(f'Found existing brand: {brand.name} (ID: {brand.id})')
                                 except Brand.DoesNotExist:
-                                    # Auto-create company if it doesn't exist
-                                    log_entry['steps'].append('Brand not found, creating company...')
-                                    try:
-                                        company = Company.objects.get(code=company_code.strip())
-                                        log_entry['steps'].append(f'Found existing company: {company.name} (ID: {company.id})')
-                                    except Company.DoesNotExist:
-                                        # Create new company with auto-generated name
-                                        company_name = f"Company {company_code.strip()}"
-                                        company = Company.objects.create(
-                                            code=company_code.strip(),
-                                            name=company_name,
-                                            is_active=True
-                                        )
-                                        stats['companies_created'] += 1
-                                        log_entry['steps'].append(f'Created new company: {company.name} (ID: {company.id})')
-                                    
-                                    # Create new brand with auto-generated name
-                                    log_entry['steps'].append('Creating new brand...')
-                                    brand_name = f"Brand {brand_code.strip()}"
-                                    brand = Brand.objects.create(
-                                        code=brand_code.strip(),
-                                        name=brand_name,
-                                        company=company,
-                                        is_active=True
-                                    )
-                                    brand_cache[brand_key] = brand
-                                    stats['brands_created'] += 1
-                                    log_entry['steps'].append(f'Created new brand: {brand.name} (ID: {brand.id})')
+                                    # Skip row if brand doesn't exist - DO NOT AUTO-CREATE
+                                    log_entry['status'] = 'skipped'
+                                    log_entry['reason'] = f'Brand with code "{brand_code}" not found in company "{company_code}". Please create the brand first in the system.'
+                                    stats['detailed_log'].append(log_entry)
+                                    stats['products_skipped'] += 1
+                                    continue
                             else:
                                 brand = brand_cache[brand_key]
                                 log_entry['steps'].append(f'Using cached brand: {brand.name}')
