@@ -20,7 +20,8 @@
                        x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
                        @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
                        placeholder="e.g., 100,000"
-                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      x-bind:disabled="promoType !== 'threshold_tier'">
                 <p class="mt-1 text-xs text-gray-500">Discount for this tier level</p>
             </div>
 
@@ -36,7 +37,8 @@
                        x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
                        @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
                        placeholder="e.g., 500,000"
-                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      x-bind:disabled="promoType !== 'threshold_tier'">
                 <p class="mt-1 text-xs text-gray-500">Minimum spend to reach this tier</p>
             </div>
 

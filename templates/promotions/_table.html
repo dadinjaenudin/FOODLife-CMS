@@ -1,3 +1,5 @@
+{% load humanize %}
+{% load currency %}
 <!-- Promotions Table -->
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
@@ -59,14 +61,14 @@
                     {% if promotion.promo_type == 'percent_discount' %}
                         <span class="font-semibold text-green-600">{{ promotion.discount_percent }}%</span>
                     {% elif promotion.promo_type == 'amount_discount' %}
-                        <span class="font-semibold text-green-600">Rp {{ promotion.discount_amount|floatformat:0 }}</span>
+                        <span class="font-semibold text-green-600">Rp {{ promotion.discount_amount|comma_number }}</span>
                     {% elif promotion.promo_type == 'buy_x_get_y' %}
                         <span class="text-xs text-gray-600">Buy {{ promotion.buy_quantity }} Get {{ promotion.get_quantity }}</span>
                     {% else %}
                         <span class="text-xs text-gray-500">See details</span>
                     {% endif %}
                     {% if promotion.min_purchase > 0 %}
-                        <div class="text-xs text-gray-500">Min: Rp {{ promotion.min_purchase|floatformat:0 }}</div>
+                        <div class="text-xs text-gray-500">Min: Rp {{ promotion.min_purchase|comma_number }}</div>
                     {% endif %}
                 </td>
                 

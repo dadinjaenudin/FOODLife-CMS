@@ -42,30 +42,46 @@
                     <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                         <div class="aspect-square bg-gray-100 flex items-center justify-center relative group">
                             {% if product.primary_photo %}
-                                <img src="{{ product.primary_photo.photo.url }}" 
-                                     alt="{{ product.name }}" 
-                                     class="w-full h-full object-cover">
+                                {% if product.primary_photo.get_image_url %}
+                                    <img src="{{ product.primary_photo.get_image_url }}" 
+                                         alt="{{ product.name }}" 
+                                         class="w-full h-full object-cover"
+                                         id="previewImage">
+                                {% elif product.primary_photo.photo %}
+                                    <img src="{{ product.primary_photo.photo.url }}" 
+                                         alt="{{ product.name }}" 
+                                         class="w-full h-full object-cover"
+                                         id="previewImage">
+                                {% endif %}
                             {% else %}
-                                <div class="text-center">
+                                <div class="text-center" id="placeholderImage">
                                     <i class="fas fa-image text-gray-300 text-4xl mb-2 block"></i>
                                     <p class="text-gray-400 text-sm">No Image</p>
+                                    <p class="text-gray-400 text-xs mt-1">Click below to upload</p>
                                 </div>
                             {% endif %}
                             
                             <!-- Hover overlay -->
                             <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                                 <label class="cursor-pointer bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700">
-                                    Change Image
-                                    <input type="file" name="primary_photo" accept="image/*" class="hidden" id="primaryPhotoInput">
+                                    <i class="fas fa-upload mr-2"></i>Change Image
+                                    <input type="file" name="images" accept="image/*" multiple class="hidden" id="imagesInput">
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Add/Manage Photos Button -->
-                        <div class="p-4 border-t border-gray-200">
-                            <button type="button" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition">
-                                <i class="fas fa-images mr-2"></i>Manage Photos (0)
-                            </button>
+                        <!-- Upload Instructions -->
+                        <div class="p-4 border-t border-gray-200 bg-blue-50">
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                                <div class="text-xs text-blue-800">
+                                    <p class="font-semibold mb-1">Image Upload to MinIO</p>
+                                    <p>• First image = Primary photo</p>
+                                    <p>• Multiple images supported</p>
+                                    <p>• Format: JPG, PNG (max 5MB each)</p>
+                                    <p class="mt-2 text-blue-600">{% if product.photos.count %}{{ product.photos.count }} image(s) uploaded{% else %}No images yet{% endif %}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -317,18 +333,37 @@ function calculateProfit() {
     document.getElementById('profit').value = profit > 0 ? `Rp ${profit.toLocaleString('id-ID')}` : '-';
 }
 
-// Handle image upload preview
-document.getElementById('primaryPhotoInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            document.querySelector('.aspect-square').innerHTML = 
-                `<img src="${event.target.result}" class="w-full h-full object-cover">`;
-        };
-        reader.readAsDataURL(file);
-    }
-});
+// Handle image upload preview (Multiple images)
+const imagesInput = document.getElementById('imagesInput');
+if (imagesInput) {
+    imagesInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            // Show first image as preview
+            const firstFile = files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const placeholder = document.getElementById('placeholderImage');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+                
+                let previewImg = document.getElementById('previewImage');
+                if (!previewImg) {
+                    previewImg = document.createElement('img');
+                    previewImg.id = 'previewImage';
+                    previewImg.className = 'w-full h-full object-cover';
+                    document.querySelector('.aspect-square').prepend(previewImg);
+                }
+                previewImg.src = event.target.result;
+            };
+            reader.readAsDataURL(firstFile);
+            
+            // Show selected count
+            console.log(`${files.length} image(s) selected for upload to MinIO`);
+        }
+    });
+}
 
 // Initialize profit calculation
 calculateProfit();

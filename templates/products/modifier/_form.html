@@ -1,53 +1,26 @@
-<!-- Modifier Form - Ultra Compact -->
+{% load static %}
 <form 
     hx-post="{% if modifier %}{% url 'modifier:edit' modifier.pk %}{% else %}{% url 'modifier:create' %}{% endif %}"
-    x-data="{ loading: false }"
-    @submit="loading = true"
-    class="space-y-3">
+    hx-swap="none"
+    class="space-y-4">
     {% csrf_token %}
     
-    <!-- Error Messages -->
-    <div id="form-errors" class="hidden">
-        <div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-lg text-xs">
-            <i class="fas fa-exclamation-circle mr-1"></i>
-            <span id="error-message"></span>
+    <!-- Brand Info -->
+    {% if current_brand %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-store text-blue-600"></i>
+            <div>
+                <p class="text-sm font-semibold text-blue-900">{{ current_brand.name }}</p>
+                <p class="text-xs text-blue-600">{{ current_brand.company.name }}</p>
+            </div>
         </div>
     </div>
-    
-    <!-- Brand Selection -->
-    <div>
-        <label for="brand_id" class="block text-xs font-medium text-gray-700 mb-1">
-            Brand <span class="text-red-500">*</span>
-        </label>
-        <select 
-            name="brand_id" 
-            id="brand_id"
-            required
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">Select Brand</option>
-            {% for brand in brands %}
-            <option value="{{ brand.id }}" {% if modifier and modifier.brand.id|stringformat:"s" == brand.id|stringformat:"s" %}selected{% endif %} data-modifier-brand="{% if modifier %}{{ modifier.brand.id }}{% endif %}" data-loop-brand="{{ brand.id }}">{{ brand.name }} - {{ brand.company.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <script>
-        console.log('=== MODIFIER BRAND DEBUG ===');
-        console.log('Modifier exists:', {{ modifier|yesno:"true,false" }});
-        {% if modifier %}
-        console.log('Modifier brand ID:', {{ modifier.brand.id }});
-        console.log('Modifier brand name:', '{{ modifier.brand.name }}');
-        {% endif %}
-        console.log('All brands in dropdown:');
-        document.querySelectorAll('#brand_id option').forEach(option => {
-            console.log('  - Brand ID:', option.value, 'Name:', option.text, 'Selected:', option.selected, 'Data:', option.dataset);
-        });
-        console.log('========================');
-    </script>
+    {% endif %}
     
     <!-- Modifier Name -->
     <div>
-        <label for="name" class="block text-xs font-medium text-gray-700 mb-1">
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
             Modifier Name <span class="text-red-500">*</span>
         </label>
         <input 
@@ -56,20 +29,14 @@
             id="name"
             value="{% if modifier %}{{ modifier.name }}{% endif %}"
             required
-            maxlength="200"
-            placeholder="e.g., Tingkat Kepedasan, Ukuran, Topping"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        <p class="mt-1 text-xs text-gray-500">
-            <i class="fas fa-info-circle mr-1"></i>
-            Example: "Spice Level", "Size", "Add-ons"
-        </p>
+            placeholder="e.g., Ice Level, Sugar Level, Size"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
     </div>
     
-    <!-- Two Columns: Is Required & Max Selections -->
-    <div class="grid grid-cols-2 gap-3">
-        <!-- Max Selections -->
+    <!-- Row: Max Selections & Is Required -->
+    <div class="grid grid-cols-2 gap-4">
         <div>
-            <label for="max_selections" class="block text-xs font-medium text-gray-700 mb-1">
+            <label for="max_selections" class="block text-sm font-medium text-gray-700 mb-1">
                 Max Selections
             </label>
             <input 
@@ -78,22 +45,20 @@
                 id="max_selections"
                 value="{% if modifier %}{{ modifier.max_selections }}{% else %}1{% endif %}"
                 min="0"
-                placeholder="1"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <p class="mt-1 text-xs text-gray-500">0 = unlimited</p>
         </div>
         
-        <!-- Is Required (moved to right column) -->
-        <div class="flex flex-col justify-center">
-            <label class="text-xs font-medium text-gray-700 mb-2">Options</label>
-            <div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
+            <div class="flex items-center h-10 bg-gray-50 px-3 rounded-lg border border-gray-200">
                 <input 
                     type="checkbox" 
                     name="is_required" 
                     id="is_required"
                     {% if modifier and modifier.is_required %}checked{% endif %}
-                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                <label for="is_required" class="text-xs font-medium text-gray-700">
+                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                <label for="is_required" class="ml-2 text-sm text-gray-700">
                     Required Selection
                 </label>
             </div>
@@ -101,59 +66,159 @@
     </div>
     
     <!-- Active Status -->
-    <div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
+    <div class="flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
         <input 
             type="checkbox" 
             name="is_active" 
             id="is_active"
             {% if not modifier or modifier.is_active %}checked{% endif %}
-            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-        <label for="is_active" class="text-xs font-medium text-gray-700">
+            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+        <label for="is_active" class="ml-2 text-sm text-gray-700">
             Active
         </label>
     </div>
+
+    {% if modifier %}
+    <!-- Modifier Options Section -->
+    <!-- Modifier options data (loaded by Alpine component defined in parent page) -->
+    <script type="application/json" id="modifier-options-data">
+        {{ options_json|default:'[]'|safe }}
+    </script>
+    
+    <div class="border-t pt-4" x-data="modifierOptionsData()">
+        
+        <div class="flex justify-between items-center mb-3">
+            <h4 class="text-sm font-semibold text-gray-900">
+                <i class="fas fa-list mr-2"></i>Modifier Options 
+                (<span x-text="options.length"></span>)
+            </h4>
+            <button type="button" @click="showOptions = !showOptions" class="text-sm text-blue-600 hover:text-blue-700">
+                <span x-text="showOptions ? 'Hide' : 'Show'"></span>
+                <i class="fas ml-1" :class="showOptions ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+        </div>
+        
+        <div x-show="showOptions" x-transition>
+            <!-- Add Option Button -->
+            <button type="button" @click="showAddForm = !showAddForm" 
+                    class="w-full mb-3 px-3 py-2 bg-green-50 border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-100 transition">
+                <i class="fas" :class="showAddForm ? 'fa-times' : 'fa-plus'"></i>
+                <span x-text="showAddForm ? ' Cancel' : ' Add Option'"></span>
+            </button>
+
+            <!-- Add Option Form -->
+            <div x-show="showAddForm" x-transition class="bg-green-50 border border-green-300 rounded-lg p-3 mb-3">
+                <div class="space-y-2">
+                    <input type="text" x-model="newOption.name" placeholder="Option Name" 
+                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" x-model="newOption.price_adjustment" placeholder="Price Adjustment"
+                               class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <div class="flex items-center bg-white px-3 rounded-lg border border-gray-300">
+                            <input type="checkbox" x-model="newOption.is_default" class="w-4 h-4 text-green-600 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Default</label>
+                        </div>
+                    </div>
+                    <button type="button" @click="addOption()" 
+                            class="w-full px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">
+                        <i class="fas fa-check"></i> Add
+                    </button>
+                </div>
+            </div>
+
+            <!-- Options List -->
+            <div class="mb-3 space-y-2" style="max-height: 300px; overflow-y: auto;">
+                <!-- Debug info -->
+                <div class="text-xs text-gray-500 mb-2">
+                    Total options: <span x-text="options.length"></span>
+                </div>
+                
+                <div x-show="options.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center text-sm text-yellow-800">
+                    <i class="fas fa-exclamation-triangle"></i> No options added yet
+                </div>
+                
+                <template x-for="(option, index) in options" :key="index">
+                    <div class="bg-white border border-gray-200 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-medium text-sm" x-text="option.name"></span>
+                                <span x-show="option.is_default" class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Default</span>
+                                <div x-show="option.price_adjustment != 0" class="text-xs text-gray-600 mt-1">
+                                    <span x-text="option.price_adjustment > 0 ? '+Rp ' : 'Rp '"></span>
+                                    <span x-text="Math.abs(option.price_adjustment).toLocaleString('id-ID')"></span>
+                                </div>
+                            </div>
+                            <button type="button" @click="deleteOption(index)" 
+                                    class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Save Options Button -->
+            <button type="button" 
+                    @click="saveOptions('{{ modifier.pk }}', document.querySelector('[name=csrfmiddlewaretoken]').value)" 
+                    x-show="options.length > 0"
+                    class="w-full px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
+                <i class="fas fa-save"></i> Save All Options
+            </button>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Form Actions -->
-    <div class="flex justify-end gap-2 pt-3 border-t">
+    <div class="flex justify-end gap-2 pt-4 border-t">
         <button 
             type="button"
-            @click="showModal = false"
-            class="px-4 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+            @click="$dispatch('close-modal')"
+            class="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50">
             Cancel
         </button>
         <button 
             type="submit"
-            :disabled="loading"
-            class="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
-            <span x-show="!loading">
-                <i class="fas fa-save mr-1"></i>
-                {% if modifier %}Update{% else %}Create{% endif %}
-            </span>
-            <span x-show="loading">
-                <i class="fas fa-spinner fa-spin mr-1"></i>
-                Saving...
-            </span>
+            class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+            <i class="fas fa-save mr-1"></i>
+            {% if modifier %}Update{% else %}Create{% endif %}
         </button>
     </div>
 </form>
 
 <script>
+    function closeModal() {
+        // Use Alpine dispatch
+        window.dispatchEvent(new CustomEvent('close-modal'));
+    }
+    
     document.body.addEventListener('htmx:afterRequest', function(evt) {
-        if (evt.detail.target.id === 'modal-content') {
+        const form = evt.detail.elt;
+        if (form && form.tagName === 'FORM' && evt.detail.successful) {
+            console.log('Form submitted successfully');
             try {
-                const response = JSON.parse(evt.detail.xhr.response);
+                const response = JSON.parse(evt.detail.xhr.responseText);
+                console.log('Response:', response);
                 if (response.success) {
-                    document.querySelector('[x-data]').__x.$data.showModal = false;
-                    htmx.trigger('#modifier-table', 'refresh');
-                    if (typeof showToast !== 'undefined') {
+                    // Show success message first
+                    if (response.message) {
                         showToast(response.message, 'success');
                     }
-                } else {
-                    document.getElementById('form-errors').classList.remove('hidden');
-                    document.getElementById('error-message').textContent = response.message;
+                    
+                    // Then close modal
+                    console.log('Closing modal...');
+                    const modalData = document.querySelector('[x-data*="showModal"]');
+                    if (modalData && modalData.__x) {
+                        modalData.__x.$data.showModal = false;
+                        console.log('Modal closed');
+                    }
+                    
+                    // Refresh table with delay to ensure modal closes
+                    setTimeout(function() {
+                        window.location.href = '/products/modifiers/';
+                    }, 500);
                 }
             } catch (e) {
-                console.error('Error parsing response:', e);
+                console.log('Not JSON response or error:', e);
             }
         }
     });

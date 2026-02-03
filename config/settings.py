@@ -603,6 +603,13 @@ LOGIN_REDIRECT_URL = 'dashboard:index'
 LOGOUT_REDIRECT_URL = 'auth:login'
 
 
+# MinIO Configuration (Object Storage for Images)
+MINIO_ENDPOINT = env('MINIO_ENDPOINT', default='localhost:9000')
+MINIO_ACCESS_KEY = env('MINIO_ACCESS_KEY', default='foodlife_admin')
+MINIO_SECRET_KEY = env('MINIO_SECRET_KEY', default='foodlife_secret_2026')
+MINIO_USE_SSL = env.bool('MINIO_USE_SSL', default=False)
+MINIO_BUCKET_PRODUCTS = 'product-images'  # Bucket for product photos
+
 # CSRF Settings for HTMX
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
 CSRF_TRUSTED_ORIGINS = [

@@ -999,7 +999,7 @@ def sync_brands(request):
                     'description': 'Store UUID to filter stores'
                 }
             },
-            'required': ['company_id', 'store_id']
+            'required': ['company_id']
         }
     },
     examples=[
@@ -1016,14 +1016,14 @@ def sync_brands(request):
 @permission_classes([IsAuthenticated])
 def sync_stores(request):
     """
-    Get stores filtered by company and store (for food court concept)
+    Get stores filtered by company (optionally by store for food court concept)
     
     POST /api/v1/sync/stores/
     
     Request Body:
     {
         "company_id": "uuid",
-        "store_id": "uuid"
+        "store_id": "uuid"  # optional
     }
     
     Returns:
@@ -1069,12 +1069,6 @@ def sync_stores(request):
                 'code': 'MISSING_COMPANY_ID'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        if not store_id:
-            return Response({
-                'error': 'Missing required parameter: store_id in request body',
-                'code': 'MISSING_STORE_ID'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         # Validate company exists
         try:
             company = Company.objects.get(id=company_id, is_active=True)
@@ -1084,17 +1078,21 @@ def sync_stores(request):
                 'code': 'COMPANY_NOT_FOUND'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        # Verify store exists and belongs to company
-        try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
-        except Store.DoesNotExist:
-            return Response({
-                'error': 'Store not found or does not belong to the specified company',
-                'code': 'STORE_NOT_FOUND'
-            }, status=status.HTTP_404_NOT_FOUND)
+        store = None
+        query = Q(brand__company_id=company_id, is_active=True)
         
-        # Build query for stores - filter by specific store
-        query = Q(id=store_id, brand__company_id=company_id, is_active=True)
+        if store_id:
+            # Verify store exists and belongs to company
+            try:
+                store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            except Store.DoesNotExist:
+                return Response({
+                    'error': 'Store not found or does not belong to the specified company',
+                    'code': 'STORE_NOT_FOUND'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Build query for stores - filter by specific store
+            query &= Q(id=store_id)
         
         # Get stores
         stores = Store.objects.filter(query).select_related('brand__company').order_by('store_name')
@@ -1133,10 +1131,10 @@ def sync_stores(request):
                 'id': str(store.id),
                 'code': store.store_code,
                 'name': store.store_name,
-            },
+            } if store else None,
             'filter': {
                 'company_id': str(company_id),
-                'store_id': str(store_id),
+                'store_id': str(store_id) if store_id else None,
             },
             'sync_timestamp': timezone.now().isoformat(),
         })

@@ -186,6 +186,22 @@ def upload_two_sheet_excel(request):
                 'message': 'Invalid file format. Please upload .xlsx or .xls file'
             }, status=400)
         
+        # Get company and brand from global filter (middleware)
+        selected_company = getattr(request, 'current_company', None)
+        selected_brand = getattr(request, 'current_brand', None)
+        
+        if not selected_company:
+            return JsonResponse({
+                'success': False,
+                'message': 'No company selected. Please select a company from the global filter in the header.'
+            }, status=400)
+        
+        if not selected_brand:
+            return JsonResponse({
+                'success': False,
+                'message': 'No brand selected. Please select a brand from the global filter in the header.'
+            }, status=400)
+        
         # Load workbook
         wb = load_workbook(excel_file, data_only=True)
         
@@ -421,6 +437,21 @@ def upload_two_sheet_excel(request):
                                 if not plu_product:
                                     log_entry['missing_fields'].append('plu_product')
                                 stats['detailed_log'].append(log_entry)
+                                continue
+                            
+                            # ===== VALIDATE COMPANY AND BRAND CODES MATCH SELECTION =====
+                            if company_code.strip() != selected_company.code:
+                                log_entry['status'] = 'skipped'
+                                log_entry['reason'] = f'Company code "{company_code}" in Excel does not match selected company "{selected_company.code}". All products must belong to the selected company.'
+                                stats['detailed_log'].append(log_entry)
+                                stats['products_skipped'] += 1
+                                continue
+                            
+                            if brand_code.strip() != selected_brand.code:
+                                log_entry['status'] = 'skipped'
+                                log_entry['reason'] = f'Brand code "{brand_code}" in Excel does not match selected brand "{selected_brand.code}". All products must belong to the selected brand.'
+                                stats['detailed_log'].append(log_entry)
+                                stats['products_skipped'] += 1
                                 continue
                             
                             # ===== GET OR CREATE BRAND BY CODE =====

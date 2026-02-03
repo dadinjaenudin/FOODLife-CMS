@@ -1,4 +1,5 @@
 {% load humanize %}
+{% load currency %}
 <!-- Product Table - Ultra Compact -->
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
@@ -60,7 +61,7 @@
                 <td class="px-3 py-2">
                     <div class="flex justify-between items-center text-xs font-semibold text-gray-900">
                         <span>Rp</span>
-                        <span>{{ product.price|floatformat:0|intcomma }}</span>
+                        <span>{{ product.price|comma_number }}</span>
                     </div>
                     {% if product.cost %}
                     {% widthratio product.price|add:"-"|add:product.cost product.price 100 as margin %}
@@ -70,7 +71,7 @@
                 <td class="px-3 py-2">
                     <div class="flex justify-between items-center text-xs text-gray-700">
                         <span>Rp</span>
-                        <span>{{ product.cost|floatformat:0|intcomma }}</span>
+                        <span>{{ product.cost|comma_number }}</span>
                     </div>
                 </td>
                 <td class="px-3 py-2 text-center">

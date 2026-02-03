@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
-from products.models import Product, ProductPhoto, Category
+from products.models import Product, ProductPhoto, Category, Modifier, ProductModifier
 from core.models import Brand
 
 
@@ -87,7 +87,6 @@ def product_create(request):
     """Create new product with image upload"""
     if request.method == 'POST':
         try:
-            # Get brand from global filter or POST
             brand_id = request.POST.get('brand_id')
             if not brand_id and hasattr(request, 'current_brand') and request.current_brand:
                 brand_id = request.current_brand.id
@@ -110,14 +109,18 @@ def product_create(request):
                     'message': 'Brand, Category, SKU, Name and Price are required'
                 }, status=400)
             
-            # Check SKU uniqueness per brand
-            if Product.objects.filter(brand_id=brand_id, sku=sku).exists():
+            # Check unique constraint: brand + category + name + sku
+            if Product.objects.filter(
+                brand_id=brand_id,
+                category_id=category_id,
+                name=name,
+                sku=sku
+            ).exists():
                 return JsonResponse({
                     'success': False,
-                    'message': f'SKU "{sku}" already exists for this brand'
+                    'message': f'Product with this combination already exists'
                 }, status=400)
             
-            # Create product
             product = Product.objects.create(
                 brand_id=brand_id,
                 category_id=category_id,
@@ -133,14 +136,34 @@ def product_create(request):
                 is_active=is_active
             )
             
-            # Handle image upload
+            # Handle image uploads to MinIO
             images = request.FILES.getlist('images')
-            for idx, image in enumerate(images):
-                ProductPhoto.objects.create(
-                    product=product,
-                    photo=image,
-                    is_primary=(idx == 0)  # First image is primary
-                )
+            if images:
+                from core.storage import minio_storage
+                for idx, image in enumerate(images):
+                    try:
+                        # Upload to MinIO
+                        result = minio_storage.upload_product_image(
+                            file=image,
+                            product_id=str(product.id),
+                            is_primary=(idx == 0)
+                        )
+                        
+                        # Save metadata to database
+                        ProductPhoto.objects.create(
+                            product=product,
+                            object_key=result['object_key'],
+                            filename=result['filename'],
+                            size=result['size'],
+                            content_type=result['content_type'],
+                            checksum=result['checksum'],
+                            version=result['version'],
+                            is_primary=(idx == 0),
+                            sort_order=idx
+                        )
+                    except Exception as img_error:
+                        logger.error(f"Image upload error: {str(img_error)}")
+                        # Continue with other images even if one fails
             
             messages.success(request, f'Product "{product.name}" created successfully!')
             
@@ -151,7 +174,7 @@ def product_create(request):
             })
             
         except Exception as e:
-            logger.error(f"Error updating product: {str(e)}")
+            logger.error(f"Error creating product: {str(e)}")
             logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
@@ -160,15 +183,21 @@ def product_create(request):
     
     # GET request - return form
     # Filter categories by current brand from global filter
-    categories_qs = Category.objects.filter(is_active=True).select_related('brand')
+    categories_qs = Category.objects.filter(is_active=True).select_related('brand', 'parent')
     
     if hasattr(request, 'current_brand') and request.current_brand:
         categories_qs = categories_qs.filter(brand=request.current_brand)
     
-    categories = categories_qs.order_by('name')
+    # Build tree structure: [parent1, child1, child2, parent2, child3, ...]
+    parents = categories_qs.filter(parent__isnull=True).order_by('sort_order', 'name')
+    category_tree = []
+    for parent in parents:
+        category_tree.append(parent)
+        children = categories_qs.filter(parent=parent).order_by('sort_order', 'name')
+        category_tree.extend(children)
     
     return render(request, 'products/product/_form.html', {
-        'categories': categories
+        'category_tree': category_tree
     })
 
 
@@ -206,14 +235,18 @@ def product_update(request, pk):
                     'message': 'Category, SKU, Name and Price are required'
                 }, status=400)
             
-            # Check SKU uniqueness per brand (exclude current product)
-            if Product.objects.filter(brand=product.brand, sku=sku).exclude(pk=pk).exists():
+            # Check unique constraint: brand + category + name + sku (exclude current product)
+            if Product.objects.filter(
+                brand=product.brand,
+                category_id=category_id,
+                name=name,
+                sku=sku
+            ).exclude(pk=pk).exists():
                 return JsonResponse({
                     'success': False,
-                    'message': f'SKU "{sku}" already exists for this brand'
+                    'message': f'Product with this combination already exists'
                 }, status=400)
             
-            # Update product
             product.category_id = category_id
             product.sku = sku
             product.name = name
@@ -227,18 +260,36 @@ def product_update(request, pk):
             product.is_active = is_active
             product.save()
             
-            # Handle new image uploads
+            # Handle image uploads to MinIO (same as create)
             images = request.FILES.getlist('images')
             if images:
-                # Get current primary photo status
+                from core.storage import minio_storage
                 has_primary = product.photos.filter(is_primary=True).exists()
                 
                 for idx, image in enumerate(images):
-                    ProductPhoto.objects.create(
-                        product=product,
-                        photo=image,
-                        is_primary=(idx == 0 and not has_primary)  # First image is primary if no primary exists
-                    )
+                    try:
+                        # Upload to MinIO
+                        result = minio_storage.upload_product_image(
+                            file=image,
+                            product_id=str(product.id),
+                            is_primary=(idx == 0 and not has_primary)
+                        )
+                        
+                        # Save metadata to database
+                        ProductPhoto.objects.create(
+                            product=product,
+                            object_key=result['object_key'],
+                            filename=result['filename'],
+                            size=result['size'],
+                            content_type=result['content_type'],
+                            checksum=result['checksum'],
+                            version=result['version'],
+                            is_primary=(idx == 0 and not has_primary),
+                            sort_order=product.photos.count() + idx
+                        )
+                    except Exception as img_error:
+                        logger.error(f"Image upload error during edit: {str(img_error)}")
+                        # Continue with other images even if one fails
             
             messages.success(request, f'Product "{product.name}" updated successfully!')
             
@@ -258,12 +309,20 @@ def product_update(request, pk):
     
     # GET request - return form
     brands = Brand.objects.filter(is_active=True).order_by('name')
-    categories = Category.objects.filter(brand=product.brand, is_active=True).order_by('name')
+    categories_qs = Category.objects.filter(brand=product.brand, is_active=True).select_related('parent')
+    
+    # Build tree structure: [parent1, child1, child2, parent2, child3, ...]
+    parents = categories_qs.filter(parent__isnull=True).order_by('sort_order', 'name')
+    category_tree = []
+    for parent in parents:
+        category_tree.append(parent)
+        children = categories_qs.filter(parent=parent).order_by('sort_order', 'name')
+        category_tree.extend(children)
     
     return render(request, 'products/product/_form.html', {
         'product': product,
         'brands': brands,
-        'categories': categories
+        'category_tree': category_tree
     })
 
 
@@ -306,3 +365,53 @@ def product_photo_delete(request, pk):
             'success': False,
             'message': str(e)
         }, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def product_modifier_assign(request, pk):
+    """Assign/unassign modifiers to product"""
+    product = get_object_or_404(Product.objects.select_related('brand'), pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            modifier_ids = request.POST.getlist('modifier_ids')
+            
+            # Delete all existing assignments
+            ProductModifier.objects.filter(product=product).delete()
+            
+            # Create new assignments
+            for idx, modifier_id in enumerate(modifier_ids):
+                ProductModifier.objects.create(
+                    product=product,
+                    modifier_id=modifier_id,
+                    sort_order=idx
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{len(modifier_ids)} modifier(s) assigned successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error assigning modifiers: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    
+    # GET request - show assignment form
+    modifiers = Modifier.objects.filter(
+        brand=product.brand,
+        is_active=True
+    ).prefetch_related('options').order_by('name')
+    
+    assigned_modifier_ids = list(
+        product.product_modifiers.values_list('modifier_id', flat=True)
+    )
+    
+    return render(request, 'products/product/_modifier_assign.html', {
+        'product': product,
+        'modifiers': modifiers,
+        'assigned_modifier_ids': assigned_modifier_ids
+    })

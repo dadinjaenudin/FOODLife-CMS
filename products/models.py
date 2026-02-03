@@ -99,7 +99,7 @@ class Product(models.Model):
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
         ordering = ['sort_order', 'name']
-        unique_together = [['brand', 'category', 'name', 'sku']]  # Business Logic Constraint (company removed for now)
+        unique_together = [['brand', 'category', 'name', 'sku']]  # SOP: unique per brand+category+name+sku
         indexes = [
             models.Index(fields=['brand', 'is_active']),
             models.Index(fields=['category', 'is_active']),
@@ -125,13 +125,26 @@ class Product(models.Model):
 class ProductPhoto(models.Model):
     """
     Product Photos - Multiple images per product
+    Images stored in MinIO, only metadata in database
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='photos')
-    photo = models.ImageField(upload_to='product_photos/')
+    
+    # MinIO metadata (instead of ImageField)
+    object_key = models.CharField(max_length=500, blank=True, default='', help_text="MinIO object key")
+    filename = models.CharField(max_length=255, blank=True, default='', help_text="Original filename")
+    size = models.IntegerField(default=0, help_text="File size in bytes")
+    content_type = models.CharField(max_length=100, default='image/jpeg')
+    checksum = models.CharField(max_length=64, blank=True, default='', help_text="MD5 checksum for integrity")
+    version = models.IntegerField(default=1, help_text="Image version for sync")
+    
+    # Legacy field for backward compatibility (can be removed later)
+    photo = models.ImageField(upload_to='product_photos/', blank=True, null=True)
+    
     is_primary = models.BooleanField(default=False, help_text="Primary display photo")
     sort_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'product_photo'
@@ -140,10 +153,22 @@ class ProductPhoto(models.Model):
         ordering = ['sort_order']
         indexes = [
             models.Index(fields=['product', 'is_primary']),
+            models.Index(fields=['object_key']),
+            models.Index(fields=['checksum']),
         ]
     
     def __str__(self):
-        return f"{self.product.name} - Photo {self.sort_order}"
+        return f"{self.product.name} - {self.filename}"
+    
+    def get_image_url(self):
+        """Get presigned URL from MinIO"""
+        if self.object_key:
+            from core.storage import minio_storage
+            return minio_storage.get_image_url(self.object_key)
+        elif self.photo:
+            # Fallback to legacy photo field
+            return self.photo.url
+        return None
 
 
 class Modifier(models.Model):

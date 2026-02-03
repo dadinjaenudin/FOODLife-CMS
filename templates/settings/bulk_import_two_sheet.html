@@ -541,5 +541,16 @@ function getStatusClass(status) {
 function closeModal() {
     document.getElementById('logModal').classList.add('hidden');
 }
+
+// Validate form before submission
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('excel_file');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Please select an Excel file to upload!');
+        return false;
+    }
+});
 </script>
 {% endblock %}

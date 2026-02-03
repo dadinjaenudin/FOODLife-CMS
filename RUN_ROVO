@@ -1,42 +1,5 @@
-acli rovodev run
+Docker Compose MinIO Container
 
-
-                                  🚀 Apa Selanjutnya?
-
-                              Opsi 1: Implementasi Backend
-
- • Membuat API endpoint untuk compile promotions
- • Test promotion engine dengan sample data
- • Integrasi dengan POS system
-
-                               Opsi 2: Create Sample Data
-
- • Generate 50+ sample promotions covering all types
- • Create test scenarios
- • Mock transaction data
-
-                              Opsi 3: Testing & Validation
-
- • Write test cases untuk semua 12 types
- • Performance testing
- • Edge case scenarios
-
-                                  Opsi 4: Frontend/UI
-
- • Update promotion form UI
- • Add visual preview
- • Create promotion dashboard
-
-                               Opsi 5: Training Materials
-
- • Create staff training guide
- • Video tutorials
- • Quick reference cards
-
-───────────────────────────────────────────
-
- 1 Week 1-2: Setup environment + implement Compiler
- 2 Week 3-4: Build Sync API + testing
- 3 Week 5-6: Calculation Engine + preview API
- 4 Week 7-8: Background jobs + basic analytics
- 5 Week 9-12: Polish + testing + deployment
+MinIO running di localhost:9000 (API)
+MinIO Console di localhost:9001 (Web UI)
+Credentials: foodlife_admin / foodlife_secret_2026

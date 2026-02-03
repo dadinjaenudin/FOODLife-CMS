@@ -18,12 +18,12 @@
 
 <!-- User Management -->
 <div x-data="{ 
-    expanded: localStorage.getItem('menu_user') === 'true',
+    expanded: localStorage.getItem('menu_user') === 'true' || '{{ request.path }}'.includes('user'),
     toggle() {
         this.expanded = !this.expanded;
         localStorage.setItem('menu_user', this.expanded);
     }
-}" class="group">
+}" x-init="if (expanded) { localStorage.setItem('menu_user', 'true'); }" class="group">
     <button type="button" @click="toggle()"
         class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200
                {% if 'user' in request.path %}bg-blue-50 text-blue-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">
@@ -55,12 +55,12 @@
 
 <!-- Initial Setup Section -->
 <div x-data="{ 
-    expanded: localStorage.getItem('menu_initial_setup') === 'true',
+    expanded: localStorage.getItem('menu_initial_setup') === 'true' || '{{ request.path }}'.includes('company') || '{{ request.path }}'.includes('brand') || '{{ request.path }}'.includes('store'),
     toggle() {
         this.expanded = !this.expanded;
         localStorage.setItem('menu_initial_setup', this.expanded);
     }
-}">
+}" x-init="if (expanded) { localStorage.setItem('menu_initial_setup', 'true'); }">
     <button @click="toggle()"
         class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200
                bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 hover:border-amber-300 hover:shadow-md">
@@ -112,12 +112,12 @@
 
 <!-- Master Data Section -->
 <div x-data="{ 
-    expanded: localStorage.getItem('menu_master_data') === 'true',
+    expanded: localStorage.getItem('menu_master_data') === 'true' || '{{ request.path }}'.includes('product') || '{{ request.path }}'.includes('category') || '{{ request.path }}'.includes('modifier') || '{{ request.path }}'.includes('tablearea') || '{{ request.path }}'.includes('kitchenstation') || '{{ request.path }}'.includes('promotion'),
     toggle() {
         this.expanded = !this.expanded;
         localStorage.setItem('menu_master_data', this.expanded);
     }
-}">
+}" x-init="if (expanded) { localStorage.setItem('menu_master_data', 'true'); }">
     <button @click="toggle()"
         class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-gray-700 hover:bg-gray-100">
         <div class="flex items-center space-x-3">
@@ -135,8 +135,14 @@
         class="mt-1 ml-6 space-y-1 border-l-2 border-purple-200 pl-4">
 
         <!-- Products -->
-        <div x-data="{expanded: false}">
-            <button @click="expanded = !expanded"
+        <div x-data="{
+            expanded: localStorage.getItem('menu_products') === 'true' || '{{ request.path }}'.includes('product') || '{{ request.path }}'.includes('category') || '{{ request.path }}'.includes('modifier'),
+            toggle() {
+                this.expanded = !this.expanded;
+                localStorage.setItem('menu_products', this.expanded);
+            }
+        }" x-init="if (expanded) { localStorage.setItem('menu_products', 'true'); }">
+            <button @click="toggle()"
                 class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200
                            {% if 'product' in request.path or 'category' in request.path or 'modifier' in request.path %}text-purple-700 bg-purple-50{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                 <div class="flex items-center space-x-2">
@@ -148,7 +154,7 @@
             </button>
             <div x-show="expanded" x-transition class="mt-1 ml-4 space-y-1">
                 <a href="{% url 'product:list' %}"
-                    class="block px-3 py-1.5 text-xs rounded-lg transition-colors {% if 'product/list' in request.path %}text-purple-700 bg-purple-50 font-medium{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
+                    class="block px-3 py-1.5 text-xs rounded-lg transition-colors {% if 'product/list' in request.path or 'products/' in request.path %}text-purple-700 bg-purple-50 font-medium{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
                     <i class="fas fa-box w-3 mr-2"></i>Products
                 </a>
                 <a href="{% url 'category:list' %}"
@@ -157,7 +163,7 @@
                 </a>
                 <a href="{% url 'modifier:list' %}"
                     class="block px-3 py-1.5 text-xs rounded-lg transition-colors {% if 'modifier' in request.path %}text-purple-700 bg-purple-50 font-medium{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                    <i class="fas fa-sliders-h w-3 mr-2"></i>Modifiers
+                    <i class="fas fa-sliders-h w-3 mr-2"></i>Modifiers & Condiments
                 </a>
             </div>
         </div>
@@ -180,12 +186,12 @@
 
         <!-- Promotions Group -->
         <div x-data="{ 
-            expanded: localStorage.getItem('menu_promotions') === 'true',
+            expanded: localStorage.getItem('menu_promotions') === 'true' || '{{ request.path }}'.includes('promotion'),
             toggle() {
                 this.expanded = !this.expanded;
                 localStorage.setItem('menu_promotions', this.expanded);
             }
-        }">
+        }" x-init="if (expanded) { localStorage.setItem('menu_promotions', 'true'); }">
             <!-- Group Header -->
             <button @click="toggle()"
                 class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200
@@ -242,12 +248,12 @@
 
 <!-- Inventory Section - Level 1 -->
 <div x-data="{ 
-    expanded: localStorage.getItem('menu_inventory') === 'true',
+    expanded: localStorage.getItem('menu_inventory') === 'true' || '{{ request.path }}'.includes('inventory') || '{{ request.path }}'.includes('recipe') || '{{ request.path }}'.includes('stockmovement'),
     toggle() {
         this.expanded = !this.expanded;
         localStorage.setItem('menu_inventory', this.expanded);
     }
-}">
+}" x-init="if (expanded) { localStorage.setItem('menu_inventory', 'true'); }">
     <button @click="toggle()"
         class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-gray-700 hover:bg-gray-100">
         <div class="flex items-center space-x-3">
@@ -289,12 +295,12 @@
 
 <!-- Reports & Analytics -->
 <div x-data="{ 
-    expanded: localStorage.getItem('menu_reports') === 'true',
+    expanded: localStorage.getItem('menu_reports') === 'true' || '{{ request.path }}'.includes('analytics') || '{{ request.path }}'.includes('report'),
     toggle() {
         this.expanded = !this.expanded;
         localStorage.setItem('menu_reports', this.expanded);
     }
-}">
+}" x-init="if (expanded) { localStorage.setItem('menu_reports', 'true'); }">
     <button @click="toggle()"
         class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-gray-700 hover:bg-gray-100">
         <div class="flex items-center space-x-3">

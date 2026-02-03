@@ -2,7 +2,7 @@
 Products API Views - Master Data Sync Endpoints
 HO → Edge: Products, Categories, Modifiers, Tables
 """
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, authentication
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -283,6 +283,7 @@ class TableViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tables.objects.select_related('area')
     serializer_class = TableSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [authentication.SessionAuthentication, authentication.TokenAuthentication]
     
     @action(detail=False, methods=['get'])
     def sync(self, request):
@@ -331,6 +332,45 @@ class TableViewSet(viewsets.ReadOnlyModelViewSet):
             'store_id': store_id,
             'data': serializer.data
         })
+    
+    @action(detail=True, methods=['post'])
+    def update_position(self, request, pk=None):
+        """
+        Update table position on floor plan
+        
+        POST body:
+        {
+            "pos_x": 100,
+            "pos_y": 150
+        }
+        """
+        table = self.get_object()
+        
+        pos_x = request.data.get('pos_x')
+        pos_y = request.data.get('pos_y')
+        
+        if pos_x is None or pos_y is None:
+            return Response(
+                {'error': 'pos_x and pos_y are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            table.pos_x = int(pos_x)
+            table.pos_y = int(pos_y)
+            table.save()
+            
+            return Response({
+                'success': True,
+                'message': f'Table {table.id} position updated',
+                'pos_x': table.pos_x,
+                'pos_y': table.pos_y
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class KitchenStationViewSet(viewsets.ReadOnlyModelViewSet):

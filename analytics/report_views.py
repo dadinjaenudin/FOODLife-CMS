@@ -34,8 +34,8 @@ def sales_report_dashboard(request):
     # Build queryset
     bills = Bill.objects.filter(
         status='PAID',
-        bill_date__gte=start_date,
-        bill_date__lte=end_date
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
     )
     
     if store_id:
@@ -44,24 +44,24 @@ def sales_report_dashboard(request):
     # Summary statistics
     summary = bills.aggregate(
         total_bills=Count('id'),
-        total_sales=Sum('total_amount'),
+        total_sales=Sum('total'),
         total_tax=Sum('tax_amount'),
         total_discount=Sum('discount_amount'),
         total_service=Sum('service_charge'),
-        avg_bill=Avg('total_amount')
+        avg_bill=Avg('total')
     )
     
     # Daily sales trend
     daily_sales = bills.annotate(
-        date=TruncDate('bill_date')
+        date=TruncDate('created_at')
     ).values('date').annotate(
-        total=Sum('total_amount'),
+        total=Sum('total'),
         count=Count('id')
     ).order_by('date')
     
     # Payment method breakdown
     payment_breakdown = Payment.objects.filter(
-        bill__in=bills,
+        bill_id__in=bills.values_list('id', flat=True),
         status='SUCCESS'
     ).values('payment_method').annotate(
         total=Sum('amount'),
@@ -70,18 +70,18 @@ def sales_report_dashboard(request):
     
     # Top selling products
     top_products = BillItem.objects.filter(
-        bill__in=bills,
+        bill_id__in=bills.values_list('id', flat=True),
         is_void=False
     ).values('product_name').annotate(
         quantity=Sum('quantity'),
-        revenue=Sum('subtotal')
+        revenue=Sum('total')
     ).order_by('-quantity')[:10]
     
     # Hourly sales distribution
     hourly_sales = bills.extra(
-        select={'hour': 'EXTRACT(hour FROM bill_date)'}
+        select={'hour': 'EXTRACT(hour FROM created_at)'}
     ).values('hour').annotate(
-        total=Sum('total_amount'),
+        total=Sum('total'),
         count=Count('id')
     ).order_by('hour')
     
@@ -144,9 +144,11 @@ def product_performance_report(request):
     
     # Base queryset
     queryset = BillItem.objects.filter(
-        bill__status='PAID',
-        bill__bill_date__gte=start_date,
-        bill__bill_date__lte=end_date,
+        bill_id__in=Bill.objects.filter(
+            status='PAID',
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        ).values_list('id', flat=True),
         is_void=False
     )
     
@@ -247,19 +249,19 @@ def hourly_sales_report(request):
     # Hourly breakdown
     bills = Bill.objects.filter(
         status='PAID',
-        bill_date__gte=start_date,
-        bill_date__lte=end_date
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
     )
     
     if store_id:
         bills = bills.filter(store_id=store_id)
     
     hourly_data_raw = bills.extra(
-        select={'hour': 'EXTRACT(hour FROM bill_date)'}
+        select={'hour': 'EXTRACT(hour FROM created_at)'}
     ).values('hour').annotate(
         bill_count=Count('id'),
-        revenue=Sum('total_amount'),
-        avg_bill=Avg('total_amount')
+        revenue=Sum('total'),
+        avg_bill=Avg('total')
     ).order_by('hour')
     
     # Calculate total revenue for percentage

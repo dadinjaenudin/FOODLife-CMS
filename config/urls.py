@@ -82,6 +82,9 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
         
+    # API Endpoints - Master Data (Products, Categories, Tables)
+    path('api/v1/products/', include('products.api.urls')),
+    
     # API Endpoints - Edge → HO (Transaction Push)
     path('api/v1/transactions/', include('transactions.api.urls')),
     

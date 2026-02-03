@@ -20,7 +20,8 @@
                        x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
                        @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
                        placeholder="e.g., 25,000"
-                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      x-bind:disabled="promoType !== 'package'">
                 <p class="mt-1 text-xs text-gray-500">Discount amount for the package bundle</p>
             </div>
 
@@ -53,7 +54,8 @@
                                @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
                                placeholder="e.g., 50,000"
                                class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
-                               @focus="hasMinPurchase = true">
+                               @focus="hasMinPurchase = true"
+                               x-bind:disabled="promoType !== 'package' || !hasMinPurchase">
                         <p class="mt-1 text-xs text-gray-500">Min purchase to qualify for package</p>
                     </div>
                 </div>

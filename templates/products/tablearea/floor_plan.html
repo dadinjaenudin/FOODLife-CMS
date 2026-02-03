@@ -11,6 +11,11 @@
                     <p class="text-gray-600 mt-1">Real-time view of all table areas</p>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <!-- Save Positions Button -->
+                    <button onclick="saveAllPositions()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                        <i class="fas fa-save mr-2"></i>Save Positions
+                    </button>
                     <!-- Refresh Button -->
                     <button onclick="window.location.reload()" 
                             class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
@@ -157,7 +162,10 @@
                 </div>
 
                 <!-- Full Width Floor Plan -->
-                <div class="relative bg-gray-50 rounded-lg p-6 min-h-[600px] bg-grid-pattern border">
+                <div class="bg-gray-700 text-white px-4 py-2 rounded-t-lg text-xs font-medium mb-0">
+                    💡 Drag tables to reposition them | Double-click to reset position
+                </div>
+                <div class="relative bg-gray-50 rounded-lg p-6 min-h-[600px] bg-grid-pattern border rounded-t-none floor-plan-canvas" data-tablearea-id="{{ tablearea.id }}">
                     {% for table in tablearea.active_tables %}
                     {% with pos_x=table.pos_x|default:0 pos_y=table.pos_y|default:0 %}
                     {% if pos_x == 0 and pos_y == 0 %}
@@ -165,18 +173,24 @@
                         {% with auto_x=forloop.counter0|add:0 %}
                         {% with horizontal_pos=auto_x|divisibleby:8|yesno:"50,130,210,290,370,450,530,610" %}
                         {% with row_number=auto_x|floatformat:0|add:"8"|divisibleby:8|yesno:"0,1,2,3,4,5" %}
-                    <div class="absolute table-item"
+                    <div class="absolute table-item cursor-grab active:cursor-grabbing transition-shadow"
                          style="left: {% widthratio forloop.counter0|add:0 1 80 %}px; top: {% widthratio forloop.counter0 8 80 %}px; margin-left: 50px; margin-top: 100px;"
                          data-table-id="{{ table.id }}"
+                         data-original-x="{% widthratio forloop.counter0|add:0 1 80 %}"
+                         data-original-y="{% widthratio forloop.counter0 8 80 %}"
+                         data-original-ml="50"
+                         data-original-mt="100"
                          data-status="{{ table.status }}">
                         {% endwith %}
                         {% endwith %}
                         {% endwith %}
                     {% else %}
                         {# Use exact position from database - NO OFFSET, already has correct position #}
-                    <div class="absolute table-item"
+                    <div class="absolute table-item cursor-grab active:cursor-grabbing transition-shadow"
                          style="left: {{ pos_x }}px; top: {{ pos_y }}px;"
                          data-table-id="{{ table.id }}"
+                         data-original-x="{{ pos_x }}"
+                         data-original-y="{{ pos_y }}"
                          data-status="{{ table.status }}">
                     {% endif %}
                     {% endwith %}
@@ -340,6 +354,23 @@
     background-color: #f3f4f6;
     border-radius: 0.5rem 0.5rem 0 0;
 }
+
+/* Drag and drop styles */
+.table-item.dragging {
+    opacity: 0.7;
+    z-index: 50;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.table-item.dragging .table-base {
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
+}
+
+#floorPlanCanvas {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+}
 </style>
 
 <script>
@@ -360,7 +391,9 @@ function filterByStore() {
     window.location.href = currentUrl.toString();
 }
 
-// Auto refresh every 30 seconds for real-time updates
+// Auto refresh every 30 seconds for real-time updates (DISABLED for drag functionality)
+// Uncomment if you want auto-refresh and implement position persistence
+/*
 setInterval(function() {
     // Only refresh if page is visible
     if (!document.hidden) {
@@ -368,6 +401,7 @@ setInterval(function() {
         window.location.reload();
     }
 }, 30000);
+*/
 
 // Click handler for tables
 document.querySelectorAll('.table-item').forEach(item => {
@@ -382,6 +416,297 @@ document.querySelectorAll('.table-item').forEach(item => {
         // showTableDetails(tableId);
     });
 });
+
+// Drag and Drop Handler
+let draggedElement = null;
+let offsetX = 0;
+let offsetY = 0;
+let currentCanvas = null;
+
+// Load saved positions from localStorage on page load
+function loadSavedPositions() {
+    const saved = localStorage.getItem('floorPlanPositions');
+    if (saved) {
+        const positions = JSON.parse(saved);
+        Object.keys(positions).forEach(tableId => {
+            const pos = positions[tableId];
+            const element = document.querySelector(`[data-table-id="${tableId}"]`);
+            if (element) {
+                element.style.left = pos.x + 'px';
+                element.style.top = pos.y + 'px';
+                element.style.marginLeft = '0px';
+                element.style.marginTop = '0px';
+            }
+        });
+    }
+}
+
+// Save position to localStorage
+function savePositionToStorage(tableId, x, y) {
+    const saved = localStorage.getItem('floorPlanPositions') || '{}';
+    const positions = JSON.parse(saved);
+    positions[tableId] = { x: parseInt(x), y: parseInt(y) };
+    localStorage.setItem('floorPlanPositions', JSON.stringify(positions));
+}
+
+// Save position to database via AJAX
+function savePositionToDatabase(tableId, x, y) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/v1/tables/${tableId}/update-position/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({
+            pos_x: parseInt(x),
+            pos_y: parseInt(y)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`Table ${tableId} position saved to database: (${x}, ${y})`);
+        } else {
+            console.error('Failed to save position:', data.error);
+            showNotification('Failed to save position', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving position:', error);
+        showNotification('Error saving position', 'error');
+    });
+}
+
+// Save all positions from localStorage to database
+function saveAllPositions() {
+    const saved = localStorage.getItem('floorPlanPositions');
+    
+    if (!saved) {
+        showNotification('No unsaved changes', 'info');
+        return;
+    }
+    
+    const positions = JSON.parse(saved);
+    const tableIds = Object.keys(positions);
+    
+    if (tableIds.length === 0) {
+        showNotification('No unsaved changes', 'info');
+        return;
+    }
+    
+    // Show saving notification
+    showNotification(`Saving ${tableIds.length} table position(s)...`, 'info');
+    
+    // Save each position to database
+    let saved_count = 0;
+    let error_count = 0;
+    
+    tableIds.forEach(tableId => {
+        const pos = positions[tableId];
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/api/v1/products/tables/${tableId}/update_position/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({
+                pos_x: parseInt(pos.x),
+                pos_y: parseInt(pos.y)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                saved_count++;
+                console.log(`✓ Table ${tableId} saved (${pos.x}, ${pos.y})`);
+            } else {
+                error_count++;
+                console.error(`✗ Table ${tableId} failed:`, data.error);
+            }
+            
+            // If all requests completed, clear localStorage and show notification
+            if (saved_count + error_count === tableIds.length) {
+                if (error_count === 0) {
+                    localStorage.removeItem('floorPlanPositions');
+                    showNotification(`✓ All ${saved_count} positions saved successfully!`, 'success');
+                } else {
+                    showNotification(`⚠ Saved ${saved_count}, failed ${error_count}`, 'error');
+                }
+            }
+        })
+        .catch(error => {
+            error_count++;
+            console.error(`Error saving table ${tableId}:`, error);
+            
+            // If all requests completed, show notification
+            if (saved_count + error_count === tableIds.length) {
+                showNotification(`⚠ Saved ${saved_count}, failed ${error_count}`, 'error');
+            }
+        });
+    });
+}
+
+// Initialize drag handlers for all table items in a canvas
+function initializeDragHandlers(canvas) {
+    const tableItems = canvas.querySelectorAll('.table-item');
+    
+    tableItems.forEach(tableItem => {
+        // Remove existing listeners to avoid duplicates
+        tableItem.onmousedown = null;
+        tableItem.ondblclick = null;
+        
+        // Mouse Down - Start Drag
+        tableItem.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            draggedElement = this;
+            currentCanvas = canvas;
+            
+            const rect = this.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            
+            this.classList.add('dragging');
+            this.style.zIndex = '1000';
+        });
+        
+        // Double Click - Reset Position
+        tableItem.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+            const origX = this.getAttribute('data-original-x');
+            const origY = this.getAttribute('data-original-y');
+            const tableId = this.getAttribute('data-table-id');
+            
+            if (origX !== null && origY !== null) {
+                const origML = this.getAttribute('data-original-ml') || '0';
+                const origMT = this.getAttribute('data-original-mt') || '0';
+                
+                this.style.left = origX + 'px';
+                this.style.top = origY + 'px';
+                this.style.marginLeft = origML + 'px';
+                this.style.marginTop = origMT + 'px';
+                
+                // Remove from saved positions
+                const saved = localStorage.getItem('floorPlanPositions') || '{}';
+                const positions = JSON.parse(saved);
+                delete positions[tableId];
+                localStorage.setItem('floorPlanPositions', JSON.stringify(positions));
+                
+                console.log(`Table reset to original position: (${origX}, ${origY})`);
+                showNotification('Table position reset', 'info');
+            }
+        });
+    });
+}
+
+// Load saved positions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedPositions();
+    
+    // Initialize drag handlers for all canvases
+    const canvases = document.querySelectorAll('.floor-plan-canvas');
+    canvases.forEach(canvas => {
+        initializeDragHandlers(canvas);
+    });
+});
+
+// Re-initialize drag handlers when tab changes (Alpine.js)
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.closest('.floor-plan-canvas')) {
+        const canvas = e.target.closest('.floor-plan-canvas');
+        setTimeout(() => {
+            initializeDragHandlers(canvas);
+            loadSavedPositions();
+        }, 100);
+    }
+});
+
+// Watch for tab visibility changes
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const element = mutation.target;
+            if (element.classList.contains('floor-plan-canvas')) {
+                // Check if element is now visible (x-show changed)
+                if (element.style.display !== 'none') {
+                    setTimeout(() => {
+                        initializeDragHandlers(element);
+                        loadSavedPositions();
+                    }, 100);
+                }
+            }
+        }
+    });
+});
+
+// Observe all canvas elements for visibility changes
+document.querySelectorAll('.floor-plan-canvas').forEach(canvas => {
+    observer.observe(canvas, { attributes: true, attributeFilter: ['style'] });
+});
+
+// Mouse Move - Handle Drag
+document.addEventListener('mousemove', function(e) {
+    if (!draggedElement || !currentCanvas) return;
+    
+    const canvasRect = currentCanvas.getBoundingClientRect();
+    
+    // Calculate new position
+    let newX = e.clientX - canvasRect.left - offsetX;
+    let newY = e.clientY - canvasRect.top - offsetY;
+    
+    // Constrain to canvas bounds
+    const itemWidth = draggedElement.offsetWidth;
+    const itemHeight = draggedElement.offsetHeight;
+    
+    newX = Math.max(0, Math.min(newX, canvasRect.width - itemWidth));
+    newY = Math.max(0, Math.min(newY, canvasRect.height - itemHeight));
+    
+    // Apply new position
+    draggedElement.style.left = newX + 'px';
+    draggedElement.style.top = newY + 'px';
+    draggedElement.style.marginLeft = '0px';
+    draggedElement.style.marginTop = '0px';
+});
+
+// Mouse Up - Stop Drag
+document.addEventListener('mouseup', function(e) {
+    if (!draggedElement || !currentCanvas) return;
+    
+    draggedElement.classList.remove('dragging');
+    draggedElement.style.zIndex = 'auto';
+    
+    // Save position via localStorage only (not to DB yet)
+    const tableId = draggedElement.getAttribute('data-table-id');
+    const x = parseInt(draggedElement.style.left) || 0;
+    const y = parseInt(draggedElement.style.top) || 0;
+    
+    savePositionToStorage(tableId, x, y);
+    console.log(`Table ${tableId} moved to (${x}, ${y}) - saved to localStorage (click Save Positions to persist)`);
+    
+    draggedElement = null;
+    currentCanvas = null;
+    offsetX = 0;
+    offsetY = 0;
+});
+
+// Notification helper
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white text-sm z-50 ${
+        type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
 
 // Initialize filter state on page load
 document.addEventListener('DOMContentLoaded', function() {

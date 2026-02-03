@@ -20,6 +20,8 @@
                            value="{{ promotion.package.package_name|default:'' }}"
                            placeholder="e.g., Family Combo Meal"
                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                           x-bind:required="promoType === 'package'"
+                           x-bind:disabled="promoType !== 'package'"
                            required>
                 </div>
                 
@@ -33,6 +35,8 @@
                            value="{{ promotion.package.package_sku|default:'' }}"
                            placeholder="e.g., PKG-FAMILY-001"
                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                           x-bind:required="promoType === 'package'"
+                           x-bind:disabled="promoType !== 'package'"
                            required>
                 </div>
             </div>
@@ -50,7 +54,9 @@
                        @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
                        placeholder="e.g., 150,000"
                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                       required>
+                      x-bind:required="promoType === 'package'"
+                      x-bind:disabled="promoType !== 'package'"
+                      required>
                 <p class="mt-1 text-xs text-gray-500">Fixed price for the entire package</p>
             </div>
 

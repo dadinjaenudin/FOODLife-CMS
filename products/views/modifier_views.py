@@ -4,12 +4,14 @@ Modifier CRUD Views - Ultra Compact
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
-from products.models import Modifier
+from products.models import Modifier, ModifierOption
 from core.models import Brand
+import json
 
 
 @login_required
@@ -72,16 +74,26 @@ def modifier_create(request):
     """Create new modifier"""
     if request.method == 'POST':
         try:
-            brand_id = request.POST.get('brand_id')
+            # Get brand from global filter
+            brand_id = None
+            if hasattr(request, 'current_brand') and request.current_brand:
+                brand_id = request.current_brand.id
+            
+            if not brand_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Please select a brand from global filter first'
+                }, status=400)
+            
             name = request.POST.get('name', '').strip()
             is_required = request.POST.get('is_required') == 'on'
             max_selections = request.POST.get('max_selections', '1')
             is_active = request.POST.get('is_active') == 'on'
             
-            if not brand_id or not name:
+            if not name:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Brand and Name are required'
+                    'message': 'Name is required'
                 }, status=400)
             
             # Create modifier
@@ -108,10 +120,8 @@ def modifier_create(request):
             }, status=500)
     
     # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    
     return render(request, 'products/modifier/_form.html', {
-        'brands': brands
+        'current_brand': getattr(request, 'current_brand', None)
     })
 
 
@@ -155,12 +165,23 @@ def modifier_update(request, pk):
                 'message': str(e)
             }, status=500)
     
-    # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
+    # GET request - return form with prefetch options
+    modifier = Modifier.objects.prefetch_related('options').get(pk=pk)
+    
+    # Serialize options for Alpine.js
+    options_json = json.dumps([
+        {
+            'name': opt.name,
+            'price_adjustment': float(opt.price_adjustment),
+            'is_default': opt.is_default
+        }
+        for opt in modifier.options.all()
+    ])
     
     return render(request, 'products/modifier/_form.html', {
         'modifier': modifier,
-        'brands': brands
+        'options_json': options_json,
+        'current_brand': getattr(request, 'current_brand', None)
     })
 
 
@@ -184,3 +205,45 @@ def modifier_delete(request, pk):
             'success': False,
             'message': str(e)
         }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def modifier_options_save(request, pk):
+    """Save modifier options"""
+    try:
+        modifier = get_object_or_404(Modifier, pk=pk)
+        
+        # Parse JSON body
+        data = json.loads(request.body)
+        options_data = data.get('options', [])
+        
+        # Delete existing options
+        modifier.options.all().delete()
+        
+        # Create new options
+        for idx, option_data in enumerate(options_data):
+            ModifierOption.objects.create(
+                modifier=modifier,
+                name=option_data.get('name'),
+                price_adjustment=float(option_data.get('price_adjustment', 0)),
+                is_default=option_data.get('is_default', False),
+                sort_order=idx
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{len(options_data)} options saved successfully'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+

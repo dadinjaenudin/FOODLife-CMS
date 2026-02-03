@@ -11,4 +11,5 @@ urlpatterns = [
     path('create/', modifier_views.modifier_create, name='create'),
     path('<uuid:pk>/edit/', modifier_views.modifier_update, name='edit'),
     path('<uuid:pk>/delete/', modifier_views.modifier_delete, name='delete'),
+    path('<uuid:pk>/options/', modifier_views.modifier_options_save, name='options_save'),
 ]
