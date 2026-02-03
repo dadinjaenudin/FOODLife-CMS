@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+
+{% load humanize %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-6">
+    <div class="max-w-6xl mx-auto px-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">
+                    {% if product %}Edit Product{% else %}Add New Product{% endif %}
+                </h1>
+                <p class="text-gray-600 text-sm mt-1">
+                    {% if product %}Update product details and inventory{% else %}Create a new product in {{ current_brand.name }}{% endif %}
+                </p>
+            </div>
+            <a href="{% url 'product:list' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Products
+            </a>
+        </div>
+
+        <!-- Main Form -->
+        <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border">
+            {% csrf_token %}
+
+            <!-- Error Messages -->
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-b border-red-200 px-6 py-4">
+                <p class="text-red-800 text-sm font-medium mb-2">Please fix the following errors:</p>
+                {% for error in form.non_field_errors %}
+                <p class="text-red-700 text-sm">• {{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-12 gap-8 p-6">
+                <!-- LEFT COLUMN: Image & Status (3 cols) -->
+                <div class="col-span-12 md:col-span-4 space-y-6">
+                    
+                    <!-- Product Image -->
+                    <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                        <div class="aspect-square bg-gray-100 flex items-center justify-center relative group">
+                            {% if product.primary_photo %}
+                                <img src="{{ product.primary_photo.photo.url }}" 
+                                     alt="{{ product.name }}" 
+                                     class="w-full h-full object-cover">
+                            {% else %}
+                                <div class="text-center">
+                                    <i class="fas fa-image text-gray-300 text-4xl mb-2 block"></i>
+                                    <p class="text-gray-400 text-sm">No Image</p>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Hover overlay -->
+                            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                <label class="cursor-pointer bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700">
+                                    Change Image
+                                    <input type="file" name="primary_photo" accept="image/*" class="hidden" id="primaryPhotoInput">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Add/Manage Photos Button -->
+                        <div class="p-4 border-t border-gray-200">
+                            <button type="button" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition">
+                                <i class="fas fa-images mr-2"></i>Manage Photos (0)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Status Section -->
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <h3 class="font-semibold text-gray-900 mb-4 text-sm">Status</h3>
+                            
+                            <!-- Active Status -->
+                            <div class="mb-3">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="is_active" 
+                                           {% if product.is_active or not product %}checked{% endif %}
+                                           class="w-4 h-4 rounded border-gray-300 text-green-600">
+                                    <span class="ml-2 text-sm text-gray-700">Active Status</span>
+                                </label>
+                                {% if product.is_active or not product %}
+                                <span class="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded">✓ Active</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Track Stock -->
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="track_stock" 
+                                           {% if product.track_stock %}checked{% endif %}
+                                           class="w-4 h-4 rounded border-gray-300 text-green-600">
+                                    <span class="ml-2 text-sm text-gray-700">Track Stock</span>
+                                </label>
+                                {% if product.track_stock %}
+                                <span class="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">✓ Yes</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Form Fields (9 cols) -->
+                <div class="col-span-12 md:col-span-8 space-y-6">
+                    
+                    <!-- Basic Information -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h3 class="font-semibold text-gray-900 mb-4 text-sm uppercase text-gray-600">Basic Information</h3>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <!-- Product Name -->
+                            <div class="col-span-2">
+                                <label for="name" class="block text-xs font-medium text-gray-700 mb-1">
+                                    Product Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="name" id="name" 
+                                       value="{{ product.name|default:'' }}"
+                                       required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="e.g. Fresh Espresso">
+                                {% if form.name.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- SKU -->
+                            <div>
+                                <label for="sku" class="block text-xs font-medium text-gray-700 mb-1">
+                                    SKU <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="sku" id="sku"
+                                       value="{{ product.sku|default:'' }}"
+                                       required
+                                       {% if product %}readonly{% endif %}
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="e.g. SKU001">
+                                {% if form.sku.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.sku.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- RLU Product (Display only) -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">RLU Product</label>
+                                <input type="text" disabled
+                                       value="{{ product.id|default:'(Auto-generated)' }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500"
+                                       placeholder="Auto-generated">
+                            </div>
+
+                            <!-- Category -->
+                            <div>
+                                <label for="category_id" class="block text-xs font-medium text-gray-700 mb-1">
+                                    Category <span class="text-red-500">*</span>
+                                </label>
+                                <select name="category_id" id="category_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Select Category</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.id }}" 
+                                            {% if product.category_id == cat.id %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Additional Category -->
+                            <div>
+                                <label for="additional" class="block text-xs font-medium text-gray-700 mb-1">Additional</label>
+                                <input type="text" name="additional" id="additional"
+                                       value="{{ product.additional|default:'' }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="e.g. Caffeine Level">
+                            </div>
+
+                            <!-- Printer Target -->
+                            <div>
+                                <label for="printer_target" class="block text-xs font-medium text-gray-700 mb-1">Printer Target</label>
+                                <select name="printer_target" id="printer_target"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="kitchen" {% if product.printer_target == 'kitchen' %}selected{% endif %}>Kitchen</option>
+                                    <option value="bar" {% if product.printer_target == 'bar' %}selected{% endif %}>Bar</option>
+                                    <option value="counter" {% if product.printer_target == 'counter' %}selected{% endif %}>Counter</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <h3 class="font-semibold text-gray-900 mb-4 text-sm uppercase text-gray-600">Pricing</h3>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <!-- Selling Price -->
+                            <div>
+                                <label for="price" class="block text-xs font-medium text-gray-700 mb-1">
+                                    Selling Price <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-sm text-gray-600">Rp</span>
+                                    <input type="number" name="price" id="price"
+                                           value="{{ product.price|default:0 }}"
+                                           required step="0.01" min="0"
+                                           class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                           placeholder="27.000">
+                                </div>
+                            </div>
+
+                            <!-- Cost Price -->
+                            <div>
+                                <label for="cost" class="block text-xs font-medium text-gray-700 mb-1">Cost Price</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-sm text-gray-600">Rp</span>
+                                    <input type="number" name="cost" id="cost"
+                                           value="{{ product.cost|default:0 }}"
+                                           step="0.01" min="0"
+                                           class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                           placeholder="0">
+                                </div>
+                            </div>
+
+                            <!-- Profit Margin (Display Only) -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Profit Margin</label>
+                                <input type="text" id="profit" disabled
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-600"
+                                       value="(Auto-calculated)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Information -->
+                    <div class="border-l-4 border-orange-500 pl-4">
+                        <h3 class="font-semibold text-gray-900 mb-4 text-sm uppercase text-gray-600">Stock Information</h3>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Current Stock -->
+                            <div>
+                                <label for="stock_quantity" class="block text-xs font-medium text-gray-700 mb-1">
+                                    Current Stock
+                                </label>
+                                <input type="number" name="stock_quantity" id="stock_quantity"
+                                       value="{{ product.stock_quantity|default:0 }}"
+                                       step="1" min="0"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                       placeholder="1.000">
+                                <p class="text-gray-500 text-xs mt-1">{{ product.stock_quantity|default:0 }} units</p>
+                            </div>
+
+                            <!-- Low Stock Alert -->
+                            <div>
+                                <label for="low_stock_alert" class="block text-xs font-medium text-gray-700 mb-1">Low Stock Alert</label>
+                                <input type="number" name="low_stock_alert" id="low_stock_alert"
+                                       value="{{ product.low_stock_alert|default:10 }}"
+                                       step="1" min="0"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                       placeholder="10">
+                                <p class="text-gray-500 text-xs mt-1">10 units</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modifiers/Condiments -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-900 text-sm uppercase text-gray-600">
+                                <i class="fas fa-sliders-h mr-2"></i>Condiments / Modifiers
+                            </h3>
+                            <button type="button" class="text-purple-600 text-xs font-medium hover:text-purple-700">
+                                + Add Modifier
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-3 text-sm text-gray-600">
+                            <p>No modifiers assigned yet. Click "Add Modifier" to add product condiments (Sugar Level, Ice Level, Temperature, etc.)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-gray-50 rounded-b-lg">
+                <div class="text-xs text-gray-600">
+                    {% if product %}
+                    <span>Created {{ product.created_at|date:"d M Y H:i" }} | Last Updated {{ product.updated_at|date:"d M Y H:i" }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="flex gap-3">
+                    <a href="{% url 'product:list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if product %}Update Product{% else %}Create Product{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Calculate profit margin
+document.getElementById('price').addEventListener('input', calculateProfit);
+document.getElementById('cost').addEventListener('input', calculateProfit);
+
+function calculateProfit() {
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const cost = parseFloat(document.getElementById('cost').value) || 0;
+    const profit = price - cost;
+    
+    document.getElementById('profit').value = profit > 0 ? `Rp ${profit.toLocaleString('id-ID')}` : '-';
+}
+
+// Handle image upload preview
+document.getElementById('primaryPhotoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.querySelector('.aspect-square').innerHTML = 
+                `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Initialize profit calculation
+calculateProfit();
+</script>
+{% endblock %}

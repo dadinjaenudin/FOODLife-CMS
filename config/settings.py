@@ -72,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.session_debug_middleware.SessionPersistenceMiddleware',  # Session persistence
     'core.middleware.GlobalFilterMiddleware',  # Global Filter Middleware
 ]
 
@@ -90,6 +91,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.global_filters',  # Global Filter Context
             ],
+            'libraries': {
+                'currency': 'promotions.templatetags.currency',
+            },
         },
     },
 ]
@@ -134,7 +138,12 @@ if 'locmem://' in REDIS_URL or 'memory://' in REDIS_URL:
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'unique-snowflake',
-        }
+        },
+        'sessions': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'session-cache',
+            'TIMEOUT': 60 * 60 * 12,  # 12 hours
+        },
     }
 else:
     # Redis cache for production
@@ -147,12 +156,29 @@ else:
             },
             'KEY_PREFIX': 'fnb_ho',
             'TIMEOUT': 300,
+        },
+        'sessions': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'fnb_ho_session',
+            'TIMEOUT': 60 * 60 * 12,  # 12 hours
         }
     }
 
-# Session Configuration (use Redis)
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+# Session Configuration (stable login sessions)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'sessions'
+SESSION_COOKIE_NAME = 'foodlife_sessionid'  # Unique session cookie name
+SESSION_COOKIE_AGE = 60 * 60 * 12  # 12 hours
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'  # Important: prevents CSRF issues
+SESSION_COOKIE_SECURE = False  # Set to True in production (HTTPS only)
+SESSION_COOKIE_PATH = '/'  # Ensure cookie is valid for all paths
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
