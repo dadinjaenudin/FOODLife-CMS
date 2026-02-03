@@ -604,7 +604,8 @@ LOGOUT_REDIRECT_URL = 'auth:login'
 
 
 # MinIO Configuration (Object Storage for Images)
-MINIO_ENDPOINT = env('MINIO_ENDPOINT', default='localhost:9000')
+MINIO_ENDPOINT = env('MINIO_ENDPOINT', default='minio:9000')  # Use service name in Docker
+MINIO_EXTERNAL_ENDPOINT = env('MINIO_EXTERNAL_ENDPOINT', default='localhost:9000')  # For browser access
 MINIO_ACCESS_KEY = env('MINIO_ACCESS_KEY', default='foodlife_admin')
 MINIO_SECRET_KEY = env('MINIO_SECRET_KEY', default='foodlife_secret_2026')
 MINIO_USE_SSL = env.bool('MINIO_USE_SSL', default=False)

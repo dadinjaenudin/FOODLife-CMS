@@ -25,7 +25,15 @@
                         <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
                     {% elif product.photos.all %}
                         {% with product.photos.all|first as photo %}
-                        <img src="{{ photo.photo.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
+                            {% if photo.get_image_url %}
+                                <img src="{{ photo.get_image_url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
+                            {% elif photo.photo %}
+                                <img src="{{ photo.photo.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
+                            {% else %}
+                                <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">
+                                    <i class="fas fa-image text-gray-300 text-sm"></i>
+                                </div>
+                            {% endif %}
                         {% endwith %}
                     {% else %}
                     <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">

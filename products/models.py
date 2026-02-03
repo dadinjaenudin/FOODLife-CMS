@@ -120,6 +120,11 @@ class Product(models.Model):
         if self.price > 0:
             return ((self.price - self.cost) / self.price) * 100
         return 0
+    
+    @property
+    def primary_photo(self):
+        """Get primary photo or first photo"""
+        return self.photos.filter(is_primary=True).first() or self.photos.first()
 
 
 class ProductPhoto(models.Model):

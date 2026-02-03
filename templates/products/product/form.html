@@ -321,17 +321,25 @@
 </div>
 
 <script>
-// Calculate profit margin
-document.getElementById('price').addEventListener('input', calculateProfit);
-document.getElementById('cost').addEventListener('input', calculateProfit);
+// Calculate profit margin - with null checks
+const priceInput = document.getElementById('price');
+const costInput = document.getElementById('cost');
 
 function calculateProfit() {
-    const price = parseFloat(document.getElementById('price').value) || 0;
-    const cost = parseFloat(document.getElementById('cost').value) || 0;
+    if (!priceInput || !costInput) return;
+    
+    const price = parseFloat(priceInput.value) || 0;
+    const cost = parseFloat(costInput.value) || 0;
     const profit = price - cost;
     
-    document.getElementById('profit').value = profit > 0 ? `Rp ${profit.toLocaleString('id-ID')}` : '-';
+    const profitInput = document.getElementById('profit');
+    if (profitInput) {
+        profitInput.value = profit > 0 ? `Rp ${profit.toLocaleString('id-ID')}` : '-';
+    }
 }
+
+if (priceInput) priceInput.addEventListener('input', calculateProfit);
+if (costInput) costInput.addEventListener('input', calculateProfit);
 
 // Handle image upload preview (Multiple images)
 const imagesInput = document.getElementById('imagesInput');
@@ -353,9 +361,14 @@ if (imagesInput) {
                     previewImg = document.createElement('img');
                     previewImg.id = 'previewImage';
                     previewImg.className = 'w-full h-full object-cover';
-                    document.querySelector('.aspect-square').prepend(previewImg);
+                    const aspectSquare = document.querySelector('.aspect-square');
+                    if (aspectSquare) {
+                        aspectSquare.prepend(previewImg);
+                    }
                 }
-                previewImg.src = event.target.result;
+                if (previewImg) {
+                    previewImg.src = event.target.result;
+                }
             };
             reader.readAsDataURL(firstFile);
             

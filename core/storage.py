@@ -5,6 +5,7 @@ Vibe coding - plain mode: simple, direct, no over-engineering
 import os
 import hashlib
 import uuid
+from datetime import timedelta
 from minio import Minio
 from minio.error import S3Error
 from django.conf import settings
@@ -28,7 +29,10 @@ class MinIOStorage:
             secret_key=settings.MINIO_SECRET_KEY,
             secure=settings.MINIO_USE_SSL
         )
+        
         self.bucket_products = settings.MINIO_BUCKET_PRODUCTS
+        self.internal_endpoint = settings.MINIO_ENDPOINT
+        self.external_endpoint = settings.MINIO_EXTERNAL_ENDPOINT
         
         # Ensure bucket exists
         self._ensure_bucket_exists(self.bucket_products)
@@ -104,14 +108,23 @@ class MinIOStorage:
             expires: URL expiration in seconds (default 1 hour)
             
         Returns:
-            str: Presigned URL
+            str: Presigned URL (with hostname replaced for browser access)
         """
         try:
+            # Convert seconds to timedelta
+            expires_td = timedelta(seconds=expires)
+            
+            # Generate presigned URL using internal endpoint (minio:9000)
             url = self.client.presigned_get_object(
                 bucket_name=self.bucket_products,
                 object_name=object_key,
-                expires=expires
+                expires=expires_td
             )
+            
+            # Replace internal endpoint with external endpoint for browser access
+            # Example: http://minio:9000/... → http://localhost:9000/...
+            url = url.replace(self.internal_endpoint, self.external_endpoint)
+            
             return url
         except S3Error as e:
             print(f"✗ MinIO get URL error: {e}")
