@@ -25,6 +25,13 @@ def product_list(request):
         'product_modifiers__modifier'
     )
     
+    # DEBUG: Print first product photos
+    import logging
+    logger = logging.getLogger(__name__)
+    first_product = products.first()
+    if first_product:
+        logger.debug(f"First product: {first_product.name}, Photos count: {first_product.photos.count()}")
+    
     # Apply search
     if search:
         products = products.filter(
@@ -52,6 +59,9 @@ def product_list(request):
     # Apply ordering
     products = products.order_by('sort_order', 'name')
     
+    # Get total count BEFORE pagination to preserve prefetch
+    total_count = products.count()
+    
     # Pagination
     paginator = Paginator(products, 10)
     products_page = paginator.get_page(page)
@@ -72,7 +82,7 @@ def product_list(request):
         'categories': categories,
         'search': search,
         'selected_category': category_id,
-        'total_count': products.count()
+        'total_count': total_count
     }
     
     if request.headers.get('HX-Request'):
@@ -136,34 +146,34 @@ def product_create(request):
                 is_active=is_active
             )
             
-            # Handle image uploads to MinIO
+            # Handle image uploads to MinIO (only accept 1 image)
             images = request.FILES.getlist('images')
             if images:
                 from core.storage import minio_storage
-                for idx, image in enumerate(images):
-                    try:
-                        # Upload to MinIO
-                        result = minio_storage.upload_product_image(
-                            file=image,
-                            product_id=str(product.id),
-                            is_primary=(idx == 0)
-                        )
-                        
-                        # Save metadata to database
-                        ProductPhoto.objects.create(
-                            product=product,
-                            object_key=result['object_key'],
-                            filename=result['filename'],
-                            size=result['size'],
-                            content_type=result['content_type'],
-                            checksum=result['checksum'],
-                            version=result['version'],
-                            is_primary=(idx == 0),
-                            sort_order=idx
-                        )
-                    except Exception as img_error:
-                        logger.error(f"Image upload error: {str(img_error)}")
-                        # Continue with other images even if one fails
+                # Only upload the first image (single photo per product)
+                image = images[0]
+                try:
+                    # Upload to MinIO
+                    result = minio_storage.upload_product_image(
+                        file=image,
+                        product_id=str(product.id),
+                        is_primary=True  # Always primary since it's the only photo
+                    )
+                    
+                    # Save metadata to database
+                    ProductPhoto.objects.create(
+                        product=product,
+                        object_key=result['object_key'],
+                        filename=result['filename'],
+                        size=result['size'],
+                        content_type=result['content_type'],
+                        checksum=result['checksum'],
+                        version=result['version'],
+                        is_primary=True,
+                        sort_order=0
+                    )
+                except Exception as img_error:
+                    logger.error(f"Image upload error: {str(img_error)}")
             
             messages.success(request, f'Product "{product.name}" created successfully!')
             
@@ -264,32 +274,55 @@ def product_update(request, pk):
             images = request.FILES.getlist('images')
             if images:
                 from core.storage import minio_storage
-                has_primary = product.photos.filter(is_primary=True).exists()
                 
-                for idx, image in enumerate(images):
+                logger.info(f"Received {len(images)} image(s) for upload")
+                
+                # Delete all existing photos to ensure only 1 photo per product
+                old_photos = product.photos.all()
+                logger.info(f"Found {old_photos.count()} existing photos to delete")
+                
+                for old_photo in old_photos:
                     try:
-                        # Upload to MinIO
-                        result = minio_storage.upload_product_image(
-                            file=image,
-                            product_id=str(product.id),
-                            is_primary=(idx == 0 and not has_primary)
-                        )
-                        
-                        # Save metadata to database
-                        ProductPhoto.objects.create(
-                            product=product,
-                            object_key=result['object_key'],
-                            filename=result['filename'],
-                            size=result['size'],
-                            content_type=result['content_type'],
-                            checksum=result['checksum'],
-                            version=result['version'],
-                            is_primary=(idx == 0 and not has_primary),
-                            sort_order=product.photos.count() + idx
-                        )
-                    except Exception as img_error:
-                        logger.error(f"Image upload error during edit: {str(img_error)}")
-                        # Continue with other images even if one fails
+                        # Delete from MinIO
+                        if old_photo.object_key:
+                            logger.info(f"Deleting from MinIO: {old_photo.object_key}")
+                            delete_result = minio_storage.delete_image(old_photo.object_key)
+                            logger.info(f"MinIO delete result: {delete_result}")
+                        # Delete from database
+                        old_photo.delete()
+                        logger.info(f"Deleted photo record from database: {old_photo.id}")
+                    except Exception as del_error:
+                        logger.error(f"Error deleting old photo: {str(del_error)}")
+                        logger.error(traceback.format_exc())
+                
+                # Upload only the first image (single photo per product)
+                image = images[0]
+                logger.info(f"Uploading new image: {image.name}")
+                try:
+                    # Upload to MinIO
+                    result = minio_storage.upload_product_image(
+                        file=image,
+                        product_id=str(product.id),
+                        is_primary=True  # Always primary since it's the only photo
+                    )
+                    logger.info(f"Upload result: {result}")
+                    
+                    # Save metadata to database
+                    new_photo = ProductPhoto.objects.create(
+                        product=product,
+                        object_key=result['object_key'],
+                        filename=result['filename'],
+                        size=result['size'],
+                        content_type=result['content_type'],
+                        checksum=result['checksum'],
+                        version=result['version'],
+                        is_primary=True,
+                        sort_order=0
+                    )
+                    logger.info(f"Created new photo record: {new_photo.id}")
+                except Exception as img_error:
+                    logger.error(f"Image upload error during edit: {str(img_error)}")
+                    logger.error(traceback.format_exc())
             
             messages.success(request, f'Product "{product.name}" updated successfully!')
             

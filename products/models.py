@@ -165,15 +165,27 @@ class ProductPhoto(models.Model):
     def __str__(self):
         return f"{self.product.name} - {self.filename}"
     
-    def get_image_url(self):
-        """Get presigned URL from MinIO"""
+    @property
+    def image_url(self):
+        """Get presigned URL from MinIO with cache-busting (cached property for templates)"""
         if self.object_key:
             from core.storage import minio_storage
-            return minio_storage.get_image_url(self.object_key)
+            from django.utils.http import urlencode
+            import time
+            
+            base_url = minio_storage.get_image_url(self.object_key)
+            # Add cache-busting parameter using checksum or timestamp
+            cache_param = self.checksum[:8] if self.checksum else str(int(time.time()))
+            separator = '&' if '?' in base_url else '?'
+            return f"{base_url}{separator}v={cache_param}"
         elif self.photo:
             # Fallback to legacy photo field
             return self.photo.url
         return None
+    
+    def get_image_url(self):
+        """Alias for backward compatibility"""
+        return self.image_url
 
 
 class Modifier(models.Model):

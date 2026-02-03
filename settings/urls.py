@@ -8,6 +8,13 @@ from . import import_log_views
 app_name = 'settings'
 
 urlpatterns = [
+    # MinIO Configuration
+    path('minio-config/', views.minio_config_view, name='minio_config'),
+    path('minio-config/save/', views.save_minio_config, name='save_minio_config'),
+    path('minio-config/test/', views.test_minio_connection, name='test_minio_connection'),
+    path('minio-config/set-public/', views.set_bucket_public, name='set_bucket_public'),
+    path('minio-auto-login/', views.minio_auto_login, name='minio_auto_login'),
+    
     # Bulk Import (Original Template)
     path('bulk-import/', views.bulk_import_view, name='bulk_import'),
     path('download-template/', views.download_template, name='download_template'),

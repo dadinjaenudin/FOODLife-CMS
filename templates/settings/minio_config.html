@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MinIO Console Access - Settings{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">MinIO Console Access</h1>
+        <p class="text-gray-600 mt-1">Quick access to MinIO object storage console</p>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} p-4 rounded-lg border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <i class="fas fa-info-circle mr-2"></i>{{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- MinIO Console Access Card -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 border-purple-200">
+        <div class="bg-gradient-to-r from-purple-500 to-indigo-600 p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center text-white">
+                    <i class="fas fa-server text-4xl mr-4"></i>
+                    <div>
+                        <h2 class="text-2xl font-bold">MinIO Console</h2>
+                        <p class="text-purple-100 text-sm">Object Storage Management</p>
+                    </div>
+                </div>
+                <a href="{% url 'settings:minio_auto_login' %}" 
+                   target="_blank"
+                   class="px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-semibold shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Auto Login
+                </a>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Credentials Display -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-xs text-gray-500 font-medium mb-2">URL</div>
+                    <div class="flex items-center justify-between">
+                        <a href="http://{{ minio_external_endpoint }}" 
+                           target="_blank"
+                           class="text-purple-600 font-mono text-sm hover:underline truncate">
+                            {{ minio_external_endpoint }}
+                        </a>
+                        <button type="button" 
+                                onclick="copyToClipboard('http://{{ minio_external_endpoint }}')"
+                                class="ml-2 text-gray-400 hover:text-purple-600 flex-shrink-0">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-xs text-gray-500 font-medium mb-2">Username</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-800 font-mono text-sm truncate">{{ minio_access_key }}</span>
+                        <button type="button" 
+                                onclick="copyToClipboard('{{ minio_access_key }}')"
+                                class="ml-2 text-gray-400 hover:text-purple-600 flex-shrink-0">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-xs text-gray-500 font-medium mb-2">Password</div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-800 font-mono text-sm" id="secretKeyDisplay">••••••••••••••••</span>
+                        <div class="flex items-center space-x-2 flex-shrink-0">
+                            <button type="button" 
+                                    onclick="toggleSecretKey()"
+                                    class="text-gray-400 hover:text-purple-600"
+                                    title="Show/Hide">
+                                <i class="fas fa-eye" id="secretKeyIcon"></i>
+                            </button>
+                            <button type="button" 
+                                    onclick="copyToClipboard('{{ minio_secret_key }}')"
+                                    class="text-gray-400 hover:text-purple-600"
+                                    title="Copy">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Info -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-blue-900 mb-2 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>Quick Access
+                        </h3>
+                        <p class="text-blue-700 text-sm mb-3">
+                            Klik tombol "Auto Login" untuk membuka MinIO Console. Credentials akan otomatis tersedia untuk login.
+                        </p>
+                        <div class="flex items-center space-x-4 text-sm flex-wrap gap-2">
+                            <div class="flex items-center text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                <span>Connected</span>
+                            </div>
+                            <div class="flex items-center text-blue-600">
+                                <i class="fas fa-database mr-1"></i>
+                                <span>Bucket: {{ minio_bucket }}</span>
+                            </div>
+                            <button type="button" 
+                                    onclick="setBucketPublic(this)"
+                                    class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors text-xs font-medium">
+                                <i class="fas fa-globe mr-1"></i>Set Bucket Public
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Settings Link -->
+            <div class="mt-6 pt-6 border-t border-gray-200 text-center">
+                <button type="button" 
+                        onclick="toggleAdvancedSettings()"
+                        class="text-sm text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-cog mr-2"></i>Advanced Configuration
+                    <i class="fas fa-chevron-down ml-2" id="advancedIcon"></i>
+                </button>
+            </div>
+
+            <!-- Advanced Settings (Hidden by default) -->
+            <div id="advancedSettings" class="hidden mt-6 pt-6 border-t border-gray-200">
+                <form id="minioConfigForm" method="post" action="{% url 'settings:save_minio_config' %}">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-4">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <strong>Warning:</strong> Mengubah konfigurasi memerlukan restart server.
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Internal Endpoint</label>
+                                <input type="text" name="minio_endpoint" value="{{ minio_endpoint }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                       placeholder="minio:9000">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">External Endpoint</label>
+                                <input type="text" name="minio_external_endpoint" value="{{ minio_external_endpoint }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                       placeholder="localhost:9000">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Access Key</label>
+                                <input type="text" name="minio_access_key" value="{{ minio_access_key }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
+                                <input type="password" name="minio_secret_key" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                                       placeholder="Leave empty to keep current">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" name="minio_use_ssl" {% if minio_use_ssl %}checked{% endif %}
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Use SSL/HTTPS</label>
+                        </div>
+
+                        <div class="flex items-center space-x-3 pt-4">
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                            <button type="button" 
+                                    onclick="testConnection()"
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">
+                                <i class="fas fa-plug mr-2"></i>Test Connection
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results Section -->
+    <div id="testResults" class="mt-6 hidden">
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h3 class="text-xl font-semibold mb-4">Connection Test Results</h3>
+            <div id="testResultsContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Modal -->
+<div id="customModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" style="backdrop-filter: blur(4px);">
+    <div id="modalContent" class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" style="animation: modalAppear 0.3s ease-out forwards;">
+        <!-- Modal content will be inserted here -->
+    </div>
+</div>
+
+<style>
+@keyframes modalAppear {
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes modalDisappear {
+    from {
+        transform: scale(1);
+        opacity: 1;
+    }
+    to {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+}
+
+.modal-disappear {
+    animation: modalDisappear 0.2s ease-in forwards;
+}
+</style>
+
+<script>
+// Toggle advanced settings
+function toggleAdvancedSettings() {
+    const settings = document.getElementById('advancedSettings');
+    const icon = document.getElementById('advancedIcon');
+    
+    if (settings.classList.contains('hidden')) {
+        settings.classList.remove('hidden');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        settings.classList.add('hidden');
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
+
+// Copy to clipboard function
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center';
+        toast.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Copied!';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 2000);
+    }, function(err) {
+        alert('Failed to copy: ' + err);
+    });
+}
+
+// Toggle secret key visibility
+function toggleSecretKey() {
+    const display = document.getElementById('secretKeyDisplay');
+    const icon = document.getElementById('secretKeyIcon');
+    const secretKey = '{{ minio_secret_key }}';
+    
+    if (display.textContent === '••••••••••••••••') {
+        display.textContent = secretKey;
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        display.textContent = '••••••••••••••••';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+// Test MinIO connection
+async function testConnection() {
+    const button = event.target.closest('button');
+    const originalHTML = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Testing...';
+    
+    try {
+        const response = await fetch('{% url "settings:test_minio_connection" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        const resultsSection = document.getElementById('testResults');
+        const resultsContent = document.getElementById('testResultsContent');
+        
+        if (data.success) {
+            resultsContent.innerHTML = `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mr-3"></i>
+                        <div>
+                            <h4 class="font-semibold text-green-900 mb-2">Connection Successful!</h4>
+                            <p class="text-green-700 text-sm">${data.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            resultsContent.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-times-circle text-red-500 text-2xl mr-3"></i>
+                        <div>
+                            <h4 class="font-semibold text-red-900 mb-2">Connection Failed</h4>
+                            <p class="text-red-700 text-sm">${data.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        resultsSection.classList.remove('hidden');
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+    } catch (error) {
+        showCustomAlert(
+            'Connection Test Failed',
+            'Error testing connection: ' + error.message,
+            '<i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>',
+            'error'
+        );
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+    }
+}
+
+// Custom Modal Functions
+function showCustomConfirm(title, message, icon, confirmText = 'Confirm', confirmClass = 'bg-blue-500 hover:bg-blue-600') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customModal');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalContent.innerHTML = `
+            <div class="p-8 text-center">
+                ${icon}
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">${title}</h3>
+                <p class="text-gray-600 mb-6">${message}</p>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="closeModal(false)" 
+                            class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                    <button onclick="closeModal(true)" 
+                            class="px-6 py-3 ${confirmClass} text-white rounded-lg font-semibold transition-colors shadow-lg">
+                        <i class="fas fa-check mr-2"></i>${confirmText}
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+        modalContent.style.animation = 'modalAppear 0.3s ease-out forwards';
+        
+        window.closeModal = (result) => {
+            modalContent.classList.add('modal-disappear');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modalContent.classList.remove('modal-disappear');
+                resolve(result);
+            }, 200);
+        };
+        
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal(false);
+        };
+    });
+}
+
+function showCustomAlert(title, message, icon, type = 'success') {
+    const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `fixed top-4 right-4 ${colors[type]} border-2 px-6 py-4 rounded-xl shadow-2xl z-50 max-w-md transform transition-all`;
+    alertDiv.style.animation = 'slideInRight 0.3s ease-out';
+    alertDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 mr-3">
+                ${icon.replace('text-6xl', 'text-2xl')}
+            </div>
+            <div class="flex-1">
+                <strong class="block text-lg mb-1">${title}</strong>
+                <p class="text-sm">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" 
+                    class="ml-3 hover:opacity-70 transition-opacity">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 6000);
+}
+
+// Success Toast with details
+function showSuccessToast(title, message, details = null) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'fixed top-4 right-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 text-green-900 px-6 py-4 rounded-xl shadow-2xl z-50 max-w-md';
+    alertDiv.style.animation = 'slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+    
+    let detailsHTML = '';
+    if (details) {
+        detailsHTML = `
+            <div class="mt-3 text-xs bg-green-100 rounded-lg p-3 border border-green-200">
+                <div class="flex items-center mb-1">
+                    <i class="fas fa-shield-alt mr-2 text-green-600"></i>
+                    <span><strong>Policy:</strong> ${details.policy || 'Anonymous Read'}</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-globe mr-2 text-green-600"></i>
+                    <span><strong>Access:</strong> ${details.access || 'Public'}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    alertDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 mr-3">
+                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center animate-bounce">
+                    <i class="fas fa-check text-white text-lg"></i>
+                </div>
+            </div>
+            <div class="flex-1">
+                <strong class="block text-lg font-bold mb-1">${title}</strong>
+                <p class="text-sm text-green-700">${message}</p>
+                ${detailsHTML}
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" 
+                    class="ml-3 text-green-600 hover:text-green-800 transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Play success sound (optional)
+    console.log('✅ Success:', title);
+    
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 8000);
+}
+
+// Error Toast
+function showErrorToast(title, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'fixed top-4 right-4 bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-300 text-red-900 px-6 py-4 rounded-xl shadow-2xl z-50 max-w-md';
+    alertDiv.style.animation = 'slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+    
+    alertDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 mr-3">
+                <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                    <i class="fas fa-exclamation text-white text-lg"></i>
+                </div>
+            </div>
+            <div class="flex-1">
+                <strong class="block text-lg font-bold mb-1">${title}</strong>
+                <p class="text-sm text-red-700">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" 
+                    class="ml-3 text-red-600 hover:text-red-800 transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    console.error('❌ Error:', title, message);
+    
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 7000);
+}
+
+// Set bucket to public (anonymous read)
+async function setBucketPublic(buttonElement) {
+    const confirmed = await showCustomConfirm(
+        'Set Bucket to Public?',
+        'This will allow anyone to download images from <strong>{{ minio_bucket }}</strong> via direct URLs without authentication.',
+        '<i class="fas fa-globe text-6xl text-yellow-500 mb-4"></i>',
+        'Set Public',
+        'bg-yellow-500 hover:bg-yellow-600'
+    );
+    
+    if (!confirmed) return;
+    
+    const button = buttonElement;
+    const originalHTML = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Setting...';
+    
+    try {
+        const response = await fetch('{% url "settings:set_bucket_public" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success toast
+            showSuccessToast(
+                'Bucket Set to Public!',
+                data.message || 'Bucket is now publicly readable',
+                data.details
+            );
+        } else {
+            showErrorToast(
+                'Failed to Set Bucket Public',
+                data.message || 'An error occurred'
+            );
+        }
+        
+    } catch (error) {
+        showErrorToast(
+            'Error Setting Bucket',
+            error.message || 'An unexpected error occurred'
+        );
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+    }
+}
+
+// Form submission
+document.getElementById('minioConfigForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const confirmed = await showCustomConfirm(
+        'Save Configuration?',
+        'Server restart is required for changes to take effect. Continue?',
+        '<i class="fas fa-save text-6xl text-blue-500 mb-4"></i>',
+        'Save Changes',
+        'bg-blue-500 hover:bg-blue-600'
+    );
+    
+    if (!confirmed) return;
+    
+    const formData = new FormData(this);
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalHTML = submitButton.innerHTML;
+    
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData,
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'fixed top-4 right-4 bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-lg z-50';
+            alertDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+                    <div>
+                        <strong>Success!</strong>
+                        <p class="text-sm">${data.message}</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => alertDiv.remove(), 5000);
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            alert('Error: ' + data.message);
+        }
+        
+    } catch (error) {
+        alert('Error saving configuration: ' + error.message);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalHTML;
+    }
+});
+</script>
+{% endblock %}

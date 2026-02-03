@@ -19,19 +19,35 @@
     
     <!-- HTMX Configuration for Session Persistence -->
     <script>
-        // Configure HTMX to include credentials on all requests
-        document.body.addEventListener('htmx:configRequest', function(evt) {
-            evt.detail.credentials = 'same-origin';
-            evt.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
+        // Wait for DOM to be ready before attaching event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configure HTMX to include credentials and CSRF token on all requests
+            document.body.addEventListener('htmx:configRequest', function(evt) {
+                evt.detail.credentials = 'same-origin';
+                evt.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
+                
+                // Add CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+                if (csrfToken) {
+                    evt.detail.headers['X-CSRFToken'] = csrfToken;
+                }
+            });
         });
         
-        // Add CSRF token to all HTMX requests
-        document.body.addEventListener('htmx:configRequest', function(evt) {
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-            if (csrfToken) {
-                evt.detail.headers['X-CSRFToken'] = csrfToken;
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
-        });
+            return cookieValue;
+        }
     </script>
     
     <!-- Font Awesome -->
@@ -401,27 +417,6 @@
     
     <!-- HTMX Config -->
     <script>
-        // Get CSRF token from cookie
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        
-        // Configure HTMX to send CSRF token
-        document.body.addEventListener('htmx:configRequest', (event) => {
-            event.detail.headers['X-CSRFToken'] = getCookie('csrftoken');
-        });
-        
         // Auto-hide messages after 3 seconds
         document.addEventListener('DOMContentLoaded', function() {
             const messages = document.querySelectorAll('[data-message]');

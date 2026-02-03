@@ -1,5 +1,6 @@
 {% load humanize %}
 {% load currency %}
+
 <form
     hx-post="{% if product %}{% url 'product:edit' product.pk %}{% else %}{% url 'product:create' %}{% endif %}"
     hx-encoding="multipart/form-data"
@@ -24,7 +25,7 @@
         <div class="flex justify-between items-center mb-1">
             <div>
                 <h1 class="text-lg font-bold text-gray-800">
-                    {% if product %}Edit Product{% else %}Add Product{% endif %}
+                    {% if product %}Edit Product New - TEST{% else %}Add Product{% endif %}
                 </h1>
                 <p class="text-xs text-gray-600">
                     {% if product %}Update product information{% else %}Create new product{% endif %}
@@ -45,21 +46,38 @@
                     <h3 class="text-xs font-semibold text-gray-800 mb-1.5">Product Image</h3>
 
                     <!-- Current Image -->
-                    <div class="mb-1.5">
-                        {% if product and product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}"
-                             id="image-preview"
-                             class="w-full rounded-lg shadow-md mb-0.5">
-                        {% else %}
-                        <div id="image-preview" class="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-0.5">
-                            <div class="text-center text-gray-400">
-                                <svg class="w-12 h-12 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                <p class="text-xs">No Image</p>
+                    <div class="mb-1.5" id="image-preview-container">
+                        <div id="image-preview" class="w-full">
+                            {% if product.photos.all %}
+                                {% for photo in product.photos.all %}
+                                    {% if photo.is_primary %}
+                                    <img src="{{ photo.image_url|safe }}" alt="{{ product.name }}"
+                                         class="w-full rounded-lg shadow-md mb-0.5"
+                                         onerror="console.error('Failed to load image:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="w-full h-32 bg-gray-200 rounded-lg items-center justify-center mb-0.5" style="display: none;">
+                                        <div class="text-center text-gray-400">
+                                            <svg class="w-12 h-12 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            <p class="text-xs">Image Load Failed</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif product and product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                                 class="w-full rounded-lg shadow-md mb-0.5">
+                            {% else %}
+                            <div class="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-0.5">
+                                <div class="text-center text-gray-400">
+                                    <svg class="w-12 h-12 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <p class="text-xs">No Image</p>
+                                </div>
                             </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
 
                     <!-- Upload Button -->

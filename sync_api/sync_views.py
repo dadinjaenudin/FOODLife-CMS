@@ -2106,3 +2106,173 @@ def sync_product_modifiers(request):
             'code': 'INTERNAL_ERROR',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'company_id': {
+                    'type': 'string',
+                    'format': 'uuid',
+                    'description': 'Company UUID to filter products'
+                },
+                'store_id': {
+                    'type': 'string',
+                    'format': 'uuid',
+                    'description': 'Store UUID to filter products'
+                },
+                'updated_since': {
+                    'type': 'string',
+                    'format': 'date-time',
+                    'description': 'Last sync timestamp for incremental sync (optional)'
+                },
+                'limit': {
+                    'type': 'integer',
+                    'description': 'Max records per request (default: 100)'
+                },
+                'offset': {
+                    'type': 'integer',
+                    'description': 'Pagination offset (default: 0)'
+                }
+            },
+            'required': ['company_id', 'store_id']
+        }
+    },
+    examples=[
+        OpenApiExample(
+            'Sync Product Photos',
+            value={
+                'company_id': '812e76b6-f235-4bb2-948a-cae58ee62b97',
+                'store_id': 'uuid-here',
+                'limit': 100,
+                'offset': 0
+            }
+        )
+    ]
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sync_product_photos(request):
+    """
+    Get list of product photos for synchronization to Edge Server
+    
+    POST /api/v1/sync/product-photos/
+    
+    Request Body:
+    {
+        "company_id": "uuid",
+        "store_id": "uuid",
+        "updated_since": "2026-01-29T00:00:00Z",  // optional
+        "limit": 100,  // optional, default 100
+        "offset": 0    // optional, default 0
+    }
+    
+    Returns:
+        - photos: List of photo metadata with image URLs
+        - total: Total number of photos
+        - has_more: Boolean indicating if more records exist
+        - next_offset: Next offset for pagination
+    """
+    try:
+        from products.models import ProductPhoto
+        
+        company_id = request.data.get('company_id')
+        store_id = request.data.get('store_id')
+        updated_since = request.data.get('updated_since')
+        limit = int(request.data.get('limit', 100))
+        offset = int(request.data.get('offset', 0))
+        
+        if not company_id:
+            return Response({
+                'error': 'company_id is required in request body',
+                'code': 'MISSING_COMPANY_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not store_id:
+            return Response({
+                'error': 'store_id is required in request body',
+                'code': 'MISSING_STORE_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify store exists and belongs to company
+        try:
+            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+        except Store.DoesNotExist:
+            return Response({
+                'error': 'Store not found or does not belong to the specified company',
+                'code': 'STORE_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get all brands operating in this store for food court concept
+        store_brands = Brand.objects.filter(
+            company_id=company_id,
+            is_active=True,
+            stores__id=store_id
+        ).values_list('id', flat=True)
+        
+        # Query photos for products in this store's brands
+        queryset = ProductPhoto.objects.select_related('product').filter(
+            product__company_id=company_id,
+            product__brand_id__in=store_brands,
+            product__is_active=True
+        )
+        
+        if updated_since:
+            try:
+                updated_since_dt = datetime.fromisoformat(updated_since.replace('Z', '+00:00'))
+                queryset = queryset.filter(updated_at__gte=updated_since_dt)
+            except (ValueError, AttributeError):
+                return Response({
+                    'error': 'Invalid updated_since format',
+                    'code': 'INVALID_DATE_FORMAT'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        total = queryset.count()
+        photos = queryset.order_by('updated_at')[offset:offset + limit]
+        
+        data = []
+        for photo in photos:
+            data.append({
+                'id': str(photo.id),
+                'product_id': str(photo.product_id),
+                'product_sku': photo.product.sku,
+                'product_name': photo.product.name,
+                'object_key': photo.object_key,
+                'filename': photo.filename,
+                'size': photo.size,
+                'content_type': photo.content_type,
+                'checksum': photo.checksum,
+                'version': photo.version,
+                'is_primary': photo.is_primary,
+                'sort_order': photo.sort_order,
+                'updated_at': photo.updated_at.isoformat() if photo.updated_at else None,
+                'image_url': photo.image_url  # Includes cache-busting parameter
+            })
+        
+        return Response({
+            'photos': data,
+            'deleted_ids': [],
+            'sync_timestamp': timezone.now().isoformat(),
+            'total': total,
+            'has_more': (offset + limit) < total,
+            'next_offset': offset + limit if (offset + limit) < total else None,
+            'filter': {
+                'company_id': str(company_id),
+                'store_id': str(store_id),
+            },
+            'store': {
+                'id': str(store.id),
+                'code': store.store_code,
+                'name': store.store_name,
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in sync_product_photos: {str(e)}", exc_info=True)
+        return Response({
+            'error': 'Internal server error',
+            'code': 'INTERNAL_ERROR',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

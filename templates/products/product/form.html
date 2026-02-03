@@ -9,7 +9,7 @@
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">
-                    {% if product %}Edit Product{% else %}Add New Product{% endif %}
+                    {% if product %}Edit Product New{% else %}Add New Product{% endif %}
                 </h1>
                 <p class="text-gray-600 text-sm mt-1">
                     {% if product %}Update product details and inventory{% else %}Create a new product in {{ current_brand.name }}{% endif %}
@@ -38,22 +38,29 @@
                 <!-- LEFT COLUMN: Image & Status (3 cols) -->
                 <div class="col-span-12 md:col-span-4 space-y-6">
                     
+                    <script>
+                        console.log('🔍 FORM LOADED - Product:', '{{ product.name }}', 'Has photos:', {{ product.photos.count }});
+                    </script>
+                    
                     <!-- Product Image -->
                     <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                         <div class="aspect-square bg-gray-100 flex items-center justify-center relative group">
-                            {% if product.primary_photo %}
-                                {% if product.primary_photo.get_image_url %}
-                                    <img src="{{ product.primary_photo.get_image_url }}" 
-                                         alt="{{ product.name }}" 
-                                         class="w-full h-full object-cover"
-                                         id="previewImage">
-                                {% elif product.primary_photo.photo %}
-                                    <img src="{{ product.primary_photo.photo.url }}" 
-                                         alt="{{ product.name }}" 
-                                         class="w-full h-full object-cover"
-                                         id="previewImage">
-                                {% endif %}
+                            {% if product and product.primary_photo and product.primary_photo.image_url %}
+                                <script>console.log('🔍 FORM: Has image_url:', '{{ product.primary_photo.image_url|safe }}');</script>
+                                <img src="{{ product.primary_photo.image_url|safe }}" 
+                                     alt="{{ product.name }}" 
+                                     class="w-full h-full object-cover"
+                                     id="previewImage"
+                                     onload="console.log('✅ Form: Image loaded:', this.src)"
+                                     onerror="console.error('❌ Form: Image failed:', this.src); this.style.display='none'; document.getElementById('placeholderImage').style.display='block';">
+                            {% elif product and product.primary_photo and product.primary_photo.photo %}
+                                <script>console.log('🔍 FORM: Using legacy photo field');</script>
+                                <img src="{{ product.primary_photo.photo.url }}" 
+                                     alt="{{ product.name }}" 
+                                     class="w-full h-full object-cover"
+                                     id="previewImage">
                             {% else %}
+                                <script>console.log('🔍 FORM: No image - showing placeholder');</script>
                                 <div class="text-center" id="placeholderImage">
                                     <i class="fas fa-image text-gray-300 text-4xl mb-2 block"></i>
                                     <p class="text-gray-400 text-sm">No Image</p>
@@ -84,6 +91,30 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Existing Images Gallery -->
+                    {% if product.photos.all %}
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="font-semibold text-gray-900 mb-3 text-sm">Uploaded Images ({{ product.photos.count }})</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            {% for photo in product.photos.all %}
+                            <div class="relative group">
+                                <img src="{{ photo.image_url|safe }}" 
+                                     alt="{{ photo.filename }}"
+                                     class="w-full h-24 object-cover rounded border border-gray-200"
+                                     onload="console.log('✅ Gallery: Loaded', '{{ photo.filename }}')"
+                                     onerror="console.error('❌ Gallery: Failed', '{{ photo.filename }}', this.src); this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%2250%22 x=%2250%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%228%22%3EError%3C/text%3E%3C/svg%3E'">
+                                {% if photo.is_primary %}
+                                <span class="absolute top-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded">Primary</span>
+                                {% endif %}
+                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate opacity-0 group-hover:opacity-100 transition">
+                                    {{ photo.filename }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Status Section -->
                     <div class="space-y-4">

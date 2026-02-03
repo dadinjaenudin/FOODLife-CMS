@@ -19,23 +19,41 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
             {% for product in products %}
+            <!-- DEBUG: {{ product.name }} - photos count: {{ product.photos.all|length }} -->
             <tr class="hover:bg-gray-50 transition">
                 <td class="px-3 py-2 whitespace-nowrap">
                     {% if product.image %}
+                        <script>console.log('Branch 1: product.image exists for {{ product.name }}');</script>
                         <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
                     {% elif product.photos.all %}
+                        <script>console.log('Branch 2: product.photos.all exists for {{ product.name }}, count:', {{ product.photos.all|length }});</script>
                         {% with product.photos.all|first as photo %}
-                            {% if photo.get_image_url %}
-                                <img src="{{ photo.get_image_url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
+                            <script>console.log('Photo object:', {
+                                id: '{{ photo.id }}',
+                                object_key: '{{ photo.object_key }}',
+                                filename: '{{ photo.filename }}',
+                                image_url: '{{ photo.image_url|safe }}',
+                                has_photo_field: {{ photo.photo|yesno:"true,false" }}
+                            });</script>
+                            {% if photo.image_url %}
+                                <script>console.log('Branch 2a: Using photo.image_url');</script>
+                                <img src="{{ photo.image_url|safe }}" 
+                                     alt="{{ product.name }}" 
+                                     class="w-12 h-12 rounded-lg object-cover border"
+                                     onload="console.log('✅ Image loaded:', this.src);"
+                                     onerror="console.error('❌ Image failed:', this.src, event);">
                             {% elif photo.photo %}
+                                <script>console.log('Branch 2b: Using photo.photo.url');</script>
                                 <img src="{{ photo.photo.url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-lg object-cover border">
                             {% else %}
+                                <script>console.log('Branch 2c: No image URL or photo field');</script>
                                 <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">
                                     <i class="fas fa-image text-gray-300 text-sm"></i>
                                 </div>
                             {% endif %}
                         {% endwith %}
                     {% else %}
+                    <script>console.log('Branch 3: No images at all for product {{ product.name }}');</script>
                     <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border">
                         <i class="fas fa-image text-gray-400 text-lg"></i>
                     </div>

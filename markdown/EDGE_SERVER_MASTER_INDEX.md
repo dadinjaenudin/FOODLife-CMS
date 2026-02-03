@@ -44,12 +44,25 @@ Dashboard: **http://localhost:8002/promotions/compiler/**
 7. **`SYNC_API_QUICK_START.md`**
    - Quick start for promotion sync only
 
+### �️ Product Image Sync (NEW!)
+
+8. **`EDGE_SERVER_IMAGE_SYNC_IMPLEMENTATION.md`** 🆕
+   - Complete implementation guide untuk image sync
+   - Database schema changes
+   - Edge server synchronization service
+   - Cache-busting strategy
+
+9. **`PRODUCT_PHOTO_SYNC_API_REFERENCE.md`** 🆕
+   - API reference untuk product photo sync
+   - Quick examples dengan curl dan Python
+   - Error handling guide
+
 ### 🛠️ Tools
 
-8. **`SYNC_API_POSTMAN_COLLECTION.json`**
-   - Import to Postman
-   - Ready-to-use requests
-   - All endpoints configured
+10. **`SYNC_API_POSTMAN_COLLECTION.json`**
+    - Import to Postman
+    - Ready-to-use requests
+    - All endpoints configured
 
 ---
 
@@ -105,6 +118,11 @@ curl -X GET "http://localhost:8002/api/v1/sync/promotions/?store_id=$STORE_ID&co
 - Table Areas (list)
 - Tables (list)
 - Kitchen Stations (list)
+
+### 🖼️ Product Images (`/api/v1/sync/`) 🆕
+- Product Photos (list with pagination)
+- Download Image Binary
+- Report Sync Status
 
 ### 🎁 Promotions (`/api/v1/sync/`)
 - Version Check

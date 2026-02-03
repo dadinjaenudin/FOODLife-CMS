@@ -10,23 +10,227 @@ from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.conf import settings
 from django.utils import timezone
+from django.contrib import messages
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 from products.models import Category, Product, Modifier, ModifierOption, ProductPhoto, ProductModifier
 from core.models import Brand, Company
+from core.storage import minio_storage
 
 # Import log saving function
 from .import_log_views import save_import_log
 
 logger = logging.getLogger(__name__)
+
+
+@login_required
+def minio_config_view(request):
+    """Display MinIO configuration page"""
+    context = {
+        'minio_endpoint': settings.MINIO_ENDPOINT,
+        'minio_external_endpoint': settings.MINIO_EXTERNAL_ENDPOINT,
+        'minio_access_key': settings.MINIO_ACCESS_KEY,
+        'minio_secret_key': settings.MINIO_SECRET_KEY,  # For display in console access box
+        'minio_use_ssl': settings.MINIO_USE_SSL,
+        'minio_bucket': settings.MINIO_BUCKET_PRODUCTS,
+    }
+    return render(request, 'settings/minio_config.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_minio_config(request):
+    """Save MinIO configuration to .env file"""
+    try:
+        minio_endpoint = request.POST.get('minio_endpoint', '').strip()
+        minio_external_endpoint = request.POST.get('minio_external_endpoint', '').strip()
+        minio_access_key = request.POST.get('minio_access_key', '').strip()
+        minio_secret_key = request.POST.get('minio_secret_key', '').strip()
+        minio_use_ssl = request.POST.get('minio_use_ssl') == 'on'
+        
+        # Validate required fields
+        if not all([minio_endpoint, minio_external_endpoint, minio_access_key]):
+            return JsonResponse({
+                'success': False,
+                'message': 'All fields are required except SSL (optional)'
+            }, status=400)
+        
+        # Read current .env file
+        env_path = settings.BASE_DIR / '.env'
+        env_lines = []
+        
+        if env_path.exists():
+            with open(env_path, 'r') as f:
+                env_lines = f.readlines()
+        
+        # Update or add MinIO settings
+        minio_settings = {
+            'MINIO_ENDPOINT': minio_endpoint,
+            'MINIO_EXTERNAL_ENDPOINT': minio_external_endpoint,
+            'MINIO_ACCESS_KEY': minio_access_key,
+            'MINIO_USE_SSL': str(minio_use_ssl).lower(),
+        }
+        
+        # Only update secret key if provided
+        if minio_secret_key:
+            minio_settings['MINIO_SECRET_KEY'] = minio_secret_key
+        
+        # Update existing lines or add new ones
+        updated_keys = set()
+        new_lines = []
+        
+        for line in env_lines:
+            line_strip = line.strip()
+            if '=' in line_strip and not line_strip.startswith('#'):
+                key = line_strip.split('=')[0].strip()
+                if key in minio_settings:
+                    new_lines.append(f"{key}={minio_settings[key]}\n")
+                    updated_keys.add(key)
+                else:
+                    new_lines.append(line)
+            else:
+                new_lines.append(line)
+        
+        # Add new keys that weren't in the file
+        for key, value in minio_settings.items():
+            if key not in updated_keys:
+                new_lines.append(f"{key}={value}\n")
+        
+        # Write back to .env file
+        with open(env_path, 'w') as f:
+            f.writelines(new_lines)
+        
+        logger.info(f"MinIO configuration updated by {request.user.username}")
+        
+        messages.success(request, 'MinIO configuration saved successfully! Please restart the server for changes to take effect.')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Configuration saved successfully! Please restart the server.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error saving MinIO config: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error saving configuration: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def test_minio_connection(request):
+    """Test MinIO connection with current settings"""
+    try:
+        # Try to list buckets or connect to MinIO
+        result = minio_storage.test_connection()
+        
+        if result['success']:
+            return JsonResponse({
+                'success': True,
+                'message': 'MinIO connection successful!',
+                'details': result.get('details', {})
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f"Connection failed: {result.get('error', 'Unknown error')}"
+            }, status=500)
+        
+    except Exception as e:
+        logger.error(f"MinIO connection test error: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Connection test failed: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def set_bucket_public(request):
+    """
+    Set MinIO bucket to anonymous read policy (download only)
+    Allows images to be accessed via direct URLs without presigned signatures
+    """
+    try:
+        import json
+        from minio import Minio
+        from minio.error import S3Error
+        
+        # Create MinIO client
+        client = Minio(
+            settings.MINIO_ENDPOINT,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            secure=settings.MINIO_USE_SSL
+        )
+        
+        bucket_name = settings.MINIO_BUCKET_PRODUCTS
+        
+        # Anonymous read-only policy (download access only)
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                }
+            ]
+        }
+        
+        policy_json = json.dumps(policy)
+        
+        # Set bucket policy
+        client.set_bucket_policy(bucket_name, policy_json)
+        
+        logger.info(f"Bucket '{bucket_name}' set to public read by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f"Bucket '{bucket_name}' is now publicly readable",
+            'details': {
+                'bucket': bucket_name,
+                'policy': 'Anonymous read-only (s3:GetObject)',
+                'access': f"http://{settings.MINIO_EXTERNAL_ENDPOINT}/{bucket_name}/object-key"
+            }
+        })
+        
+    except S3Error as e:
+        logger.error(f"MinIO S3 error setting bucket public: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'MinIO error: {str(e)}'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"Error setting bucket public: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def minio_auto_login(request):
+    """
+    Auto-login page untuk MinIO Console
+    Membuat halaman dengan form yang auto-submit credentials ke MinIO
+    """
+    context = {
+        'minio_endpoint': settings.MINIO_EXTERNAL_ENDPOINT,
+        'minio_access_key': settings.MINIO_ACCESS_KEY,
+        'minio_secret_key': settings.MINIO_SECRET_KEY,
+    }
+    return render(request, 'settings/minio_auto_login.html', context)
 
 
 @login_required

@@ -22,7 +22,8 @@ class MinIOStorage:
     """
     
     def __init__(self):
-        """Initialize MinIO client"""
+        """Initialize MinIO client (internal only for operations)"""
+        # Internal client for Docker network (web container → minio container)
         self.client = Minio(
             settings.MINIO_ENDPOINT,
             access_key=settings.MINIO_ACCESS_KEY,
@@ -34,7 +35,7 @@ class MinIOStorage:
         self.internal_endpoint = settings.MINIO_ENDPOINT
         self.external_endpoint = settings.MINIO_EXTERNAL_ENDPOINT
         
-        # Ensure bucket exists
+        # Ensure bucket exists (using internal client)
         self._ensure_bucket_exists(self.bucket_products)
     
     def _ensure_bucket_exists(self, bucket_name):
@@ -101,34 +102,18 @@ class MinIOStorage:
     
     def get_image_url(self, object_key, expires=3600):
         """
-        Get presigned URL for image access
+        Get direct URL for image access (no presigning - requires public bucket)
         
         Args:
             object_key: Object key in MinIO
-            expires: URL expiration in seconds (default 1 hour)
+            expires: Not used (kept for compatibility)
             
         Returns:
-            str: Presigned URL (with hostname replaced for browser access)
+            str: Direct URL to MinIO object
         """
-        try:
-            # Convert seconds to timedelta
-            expires_td = timedelta(seconds=expires)
-            
-            # Generate presigned URL using internal endpoint (minio:9000)
-            url = self.client.presigned_get_object(
-                bucket_name=self.bucket_products,
-                object_name=object_key,
-                expires=expires_td
-            )
-            
-            # Replace internal endpoint with external endpoint for browser access
-            # Example: http://minio:9000/... → http://localhost:9000/...
-            url = url.replace(self.internal_endpoint, self.external_endpoint)
-            
-            return url
-        except S3Error as e:
-            print(f"✗ MinIO get URL error: {e}")
-            return None
+        # Return direct URL: http://localhost:9000/bucket/object_key
+        # No signature needed if bucket is public or using anonymous access
+        return f"http://{self.external_endpoint}/{self.bucket_products}/{object_key}"
     
     def delete_image(self, object_key):
         """Delete image from MinIO"""
@@ -154,6 +139,78 @@ class MinIOStorage:
         except S3Error as e:
             print(f"✗ MinIO list error: {e}")
             return []
+    
+    def download_image(self, object_key):
+        """
+        Download image binary data from MinIO
+        
+        Args:
+            object_key: Object key in MinIO (e.g., "products/uuid/primary.jpg")
+            
+        Returns:
+            bytes: Binary image data
+            
+        Raises:
+            Exception: If download fails
+        """
+        try:
+            response = self.client.get_object(
+                bucket_name=self.bucket_products,
+                object_name=object_key
+            )
+            
+            # Read all data
+            image_data = response.read()
+            response.close()
+            response.release_conn()
+            
+            return image_data
+            
+        except S3Error as e:
+            print(f"✗ MinIO download error: {e}")
+            raise Exception(f"Failed to download image: {str(e)}")
+    
+    def test_connection(self):
+        """
+        Test MinIO connection and return status
+        
+        Returns:
+            dict: {
+                'success': bool,
+                'error': str (if failed),
+                'details': dict (if success)
+            }
+        """
+        try:
+            # Try to list buckets
+            buckets = self.client.list_buckets()
+            bucket_names = [bucket.name for bucket in buckets]
+            
+            # Check if product bucket exists
+            product_bucket_exists = self.bucket_products in bucket_names
+            
+            return {
+                'success': True,
+                'details': {
+                    'endpoint': self.internal_endpoint,
+                    'external_endpoint': self.external_endpoint,
+                    'buckets': bucket_names,
+                    'product_bucket': self.bucket_products,
+                    'product_bucket_exists': product_bucket_exists,
+                    'use_ssl': settings.MINIO_USE_SSL
+                }
+            }
+            
+        except S3Error as e:
+            return {
+                'success': False,
+                'error': f"MinIO S3 Error: {str(e)}"
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f"Connection Error: {str(e)}"
+            }
 
 
 # Singleton instance
