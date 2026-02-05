@@ -29,7 +29,7 @@ def user_list(request):
     search = request.GET.get('search', '')
     
     # Base queryset
-    users = User.objects.all().select_related('company', 'brand', 'store')
+    users = User.objects.all().select_related('company', 'store')
     
     # Apply Role/Scope Filters (RBAC)
     if request.user.is_superuser or request.user.role_scope == 'global':
@@ -187,25 +187,25 @@ def user_create(request):
         # If company selected in Global Filter, filter brands
         if hasattr(request, 'current_company') and request.current_company:
             context['brands'] = Brand.objects.filter(company=request.current_company, is_active=True).order_by('name')
-            context['stores'] = Store.objects.filter(brand__company=request.current_company, is_active=True).order_by('store_name')
+            context['stores'] = Store.objects.filter(company=request.current_company, is_active=True).order_by('store_name')
             context['selected_company_id'] = request.current_company.id
         else:
             context['brands'] = Brand.objects.filter(is_active=True).order_by('company__name', 'name')
-            context['stores'] = Store.objects.filter(is_active=True).order_by('brand__name', 'store_name')
+            context['stores'] = Store.objects.filter(is_active=True).order_by('company__name', 'store_name')
             
         # If brand selected in Global Filter, filter stores further
         if hasattr(request, 'current_brand') and request.current_brand:
-            context['stores'] = Store.objects.filter(brand=request.current_brand, is_active=True).order_by('store_name')
+            context['stores'] = Store.objects.filter(brands=request.current_brand, is_active=True).order_by('store_name')
             
     elif request.user.role_scope == 'company':
         context['companies'] = [request.user.company] if request.user.company else []
         context['brands'] = Brand.objects.filter(company=request.user.company, is_active=True) if request.user.company else []
-        context['stores'] = Store.objects.filter(brand__company=request.user.company, is_active=True) if request.user.company else []
+        context['stores'] = Store.objects.filter(company=request.user.company, is_active=True) if request.user.company else []
         context['selected_company_id'] = request.user.company.id if request.user.company else ''
     elif request.user.role_scope == 'brand':
         context['companies'] = [request.user.company] if request.user.company else []
         context['brands'] = [request.user.brand] if request.user.brand else []
-        context['stores'] = Store.objects.filter(brand=request.user.brand, is_active=True) if request.user.brand else []
+        context['stores'] = Store.objects.filter(brands=request.user.brand, is_active=True) if request.user.brand else []
         context['selected_company_id'] = request.user.company.id if request.user.company else ''
     elif request.user.role_scope == 'store':
         context['companies'] = [request.user.company] if request.user.company else []
@@ -302,24 +302,24 @@ def user_edit(request, pk):
         
         if company_to_filter:
             context['brands'] = Brand.objects.filter(company=company_to_filter, is_active=True).order_by('name')
-            context['stores'] = Store.objects.filter(brand__company=company_to_filter, is_active=True).order_by('store_name')
+            context['stores'] = Store.objects.filter(company=company_to_filter, is_active=True).order_by('store_name')
             context['selected_company_id'] = company_to_filter.id
         else:
             context['brands'] = Brand.objects.filter(is_active=True).order_by('company__name', 'name')
-            context['stores'] = Store.objects.filter(is_active=True).order_by('brand__name', 'store_name')
+            context['stores'] = Store.objects.filter(is_active=True).order_by('company__name', 'store_name')
 
         if brand_to_filter:
-            context['stores'] = Store.objects.filter(brand=brand_to_filter, is_active=True).order_by('store_name')
+            context['stores'] = Store.objects.filter(brands=brand_to_filter, is_active=True).order_by('store_name')
 
     elif request.user.role_scope == 'company':
         context['companies'] = [request.user.company] if request.user.company else []
         context['brands'] = Brand.objects.filter(company=request.user.company, is_active=True) if request.user.company else []
-        context['stores'] = Store.objects.filter(brand__company=request.user.company, is_active=True) if request.user.company else []
+        context['stores'] = Store.objects.filter(company=request.user.company, is_active=True) if request.user.company else []
         context['selected_company_id'] = request.user.company.id if request.user.company else ''
     elif request.user.role_scope == 'brand':
         context['companies'] = [request.user.company] if request.user.company else []
         context['brands'] = [request.user.brand] if request.user.brand else []
-        context['stores'] = Store.objects.filter(brand=request.user.brand, is_active=True) if request.user.brand else []
+        context['stores'] = Store.objects.filter(brands=request.user.brand, is_active=True) if request.user.brand else []
         context['selected_company_id'] = request.user.company.id if request.user.company else ''
     elif request.user.role_scope == 'store':
         context['companies'] = [request.user.company] if request.user.company else []

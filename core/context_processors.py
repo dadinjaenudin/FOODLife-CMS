@@ -18,9 +18,9 @@ def global_filters(request):
 
     # Logic for Company Dropdown
     if getattr(request.user, 'store', None):
-        # User is locked to a store (and thus company/brand)
+        # User is locked to a store (and thus company)
         context['can_filter_company'] = False
-        context['filter_companies'] = [request.user.store.brand.company]
+        context['filter_companies'] = [request.user.store.company]
     elif request.user.company:
         # User is locked to a company
         context['can_filter_company'] = False
@@ -32,9 +32,9 @@ def global_filters(request):
 
     # Logic for Brand Dropdown
     if getattr(request.user, 'store', None):
-        # User is locked to a store (and thus brand)
+        # User is locked to a store (get active brands)
         context['can_filter_brand'] = False
-        context['filter_brands'] = [request.user.store.brand]
+        context['filter_brands'] = list(request.user.store.brands.filter(is_active=True))
     elif request.user.brand:
         # User is locked to a brand
         context['can_filter_brand'] = False
@@ -68,11 +68,11 @@ def global_filters(request):
         
         current_brand = getattr(request, 'current_brand', None)
         if current_brand:
-            stores_qs = stores_qs.filter(brand=current_brand)
+            stores_qs = stores_qs.filter(brands=current_brand)
         elif request.user.brand:
-            stores_qs = stores_qs.filter(brand=request.user.brand)
+            stores_qs = stores_qs.filter(brands=request.user.brand)
         elif request.user.company:
-            stores_qs = stores_qs.filter(brand__company=request.user.company)
+            stores_qs = stores_qs.filter(company=request.user.company)
             
         context['filter_stores'] = stores_qs.order_by('store_name')
 

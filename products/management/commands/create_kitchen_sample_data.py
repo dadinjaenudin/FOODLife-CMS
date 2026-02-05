@@ -64,7 +64,7 @@ class Command(BaseCommand):
         printers_created = 0
         
         # Get stores for this brand
-        stores = Store.objects.filter(brand=brand, is_active=True)
+        stores = Store.objects.filter(brands=brand, is_active=True)
         
         # Create brand-wide kitchen stations (available to all stores)
         brand_stations = self.create_brand_wide_stations(brand)

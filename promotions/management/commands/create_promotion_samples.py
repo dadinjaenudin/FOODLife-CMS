@@ -42,7 +42,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("❌ No brand found. Please create a brand first."))
             return
         
-        stores = list(Store.objects.filter(brand=brand)[:3])
+        stores = list(Store.objects.filter(brands=brand)[:3])
         if not stores:
             self.stdout.write(self.style.ERROR("❌ No stores found. Please create stores first."))
             return

@@ -283,17 +283,17 @@ def promotion_create(request):
     companies = Company.objects.filter(is_active=True).order_by('name')
     
     # Get stores based on global filter context
-    stores = Store.objects.filter(is_active=True).select_related('brand', 'brand__company')
+    # Note: Promotions apply at brand level, so show ALL stores in the brand (not filtered by current_store)
+    stores = Store.objects.filter(is_active=True).select_related('company').prefetch_related('brands')
     
-    # Filter stores based on user's global filter
+    # Filter stores based on user's global filter (company and brand only, NOT store)
     if hasattr(request, 'current_company') and request.current_company:
-        stores = stores.filter(brand__company=request.current_company)
+        stores = stores.filter(company=request.current_company)
     if hasattr(request, 'current_brand') and request.current_brand:
-        stores = stores.filter(brand=request.current_brand)
-    if hasattr(request, 'current_store') and request.current_store:
-        stores = stores.filter(id=request.current_store.id)
+        stores = stores.filter(brands=request.current_brand)
+    # DO NOT filter by current_store - promotions apply to all stores in the brand
     
-    stores = stores.order_by('brand__name', 'store_name')
+    stores = stores.order_by('company__name', 'store_name')
     
     # Get categories and products based on global filter
     categories = Category.objects.filter(is_active=True).select_related('brand').prefetch_related('products')
@@ -543,8 +543,8 @@ def promotion_update(request, pk):
     # Get stores based on promotion's company/brand
     stores = Store.objects.filter(
         is_active=True,
-        brand__company=promotion.company
-    ).select_related('brand', 'brand__company').order_by('brand__name', 'store_name')
+        company=promotion.company
+    ).select_related('company').prefetch_related('brands').order_by('company__name', 'store_name')
     
     # Get categories and products based on promotion's company/brand
     # Note: Category only has brand field, not company

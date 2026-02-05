@@ -90,7 +90,7 @@ def enhanced_tablearea_list(request):
     
     # Get brands and stores for filter
     brands = Brand.objects.filter(is_active=True).order_by('name')
-    stores = Store.objects.filter(is_active=True).select_related('brand').order_by('brand__name', 'store_name')
+    stores = Store.objects.filter(is_active=True).select_related('company').prefetch_related('brands').order_by('company__name', 'store_name')
     
     context = {
         'tableareas': tableareas_page,
@@ -121,7 +121,7 @@ def tablearea_dashboard(request):
     brand_id = request.GET.get('brand', '')
     
     # Base queryset
-    areas = TableArea.objects.select_related('brand', 'brand__company').prefetch_related('tables')
+    areas = TableArea.objects.select_related('brand', 'brand__company', 'store').prefetch_related('tables', 'store__brands')
     
     if brand_id:
         areas = areas.filter(brand_id=brand_id)
@@ -184,7 +184,17 @@ def floor_plan_overview(request):
     # Base queryset with all related data
     tableareas = TableArea.objects.select_related(
         'brand', 'store', 'brand__company'
-    ).prefetch_related('tables').filter(is_active=True)
+    ).prefetch_related('tables', 'store__brands').filter(is_active=True)
+    
+    # Apply global filters from middleware first
+    if hasattr(request, 'current_company') and request.current_company:
+        tableareas = tableareas.filter(company=request.current_company)
+    
+    if hasattr(request, 'current_brand') and request.current_brand:
+        tableareas = tableareas.filter(brand=request.current_brand)
+    
+    if hasattr(request, 'current_store') and request.current_store:
+        tableareas = tableareas.filter(store=request.current_store)
     
     # Apply search filter
     if search:
@@ -195,7 +205,7 @@ def floor_plan_overview(request):
             Q(brand__company__name__icontains=search)
         )
     
-    # Apply store filter if provided
+    # Apply URL parameter filters (can override global filters if needed)
     if store_id:
         tableareas = tableareas.filter(store_id=store_id)
     elif brand_id:
@@ -235,7 +245,7 @@ def floor_plan_overview(request):
     
     # Get stores for filter
     from core.models import Store
-    stores = Store.objects.filter(is_active=True).select_related('brand').order_by('brand__name', 'store_name')
+    stores = Store.objects.filter(is_active=True).select_related('company').prefetch_related('brands').order_by('company__name', 'store_name')
     
     context = {
         'tableareas': enhanced_areas,

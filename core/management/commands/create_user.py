@@ -159,7 +159,7 @@ class Command(BaseCommand):
         
         # Select Store if needed
         if role_scope == 'store' and brand:
-            stores = Store.objects.filter(brand=brand, is_active=True)
+            stores = Store.objects.filter(brands=brand, is_active=True)
             if not stores.exists():
                 self.stdout.write(self.style.ERROR(f'No active stores found for {brand.name}!'))
                 return

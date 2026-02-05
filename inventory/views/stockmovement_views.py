@@ -20,7 +20,7 @@ def stockmovement_list(request):
     
     # Base queryset
     movements = StockMovement.objects.select_related(
-        'store__brand__company',
+        'store__company',
         'inventory_item',
         'created_by'
     )

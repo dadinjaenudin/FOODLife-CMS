@@ -20,7 +20,7 @@ def store_list(request):
     brand_id = request.GET.get('brand', '')
     company_id = request.GET.get('company', '')
     
-    stores = Store.objects.select_related('brand', 'brand__company')
+    stores = Store.objects.select_related('company').prefetch_related('brands')
     
     if search:
         stores = stores.filter(
@@ -30,10 +30,10 @@ def store_list(request):
         )
     
     if brand_id:
-        stores = stores.filter(brand_id=brand_id)
+        stores = stores.filter(brands__id=brand_id)
     
     if company_id:
-        stores = stores.filter(brand__company_id=company_id)
+        stores = stores.filter(company_id=company_id)
     
     paginator = Paginator(stores, 10)
     page_obj = paginator.get_page(request.GET.get('page', 1))
@@ -63,7 +63,8 @@ def store_create(request):
     """Create new store"""
     if request.method == 'POST':
         try:
-            brand_id = request.POST.get('brand_id')
+            company_id = request.POST.get('company_id')
+            brand_ids = request.POST.getlist('brand_ids')
             store_code = request.POST.get('store_code', '').strip()
             store_name = request.POST.get('store_name', '').strip()
             address = request.POST.get('address', '').strip()
@@ -73,10 +74,10 @@ def store_create(request):
             longitude = request.POST.get('longitude', '')
             is_active = request.POST.get('is_active') == 'on'
             
-            if not brand_id or not store_code or not store_name or not address or not phone:
+            if not company_id or not store_code or not store_name or not address or not phone:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Brand, Code, Name, Address and Phone are required'
+                    'message': 'Company, Code, Name, Address and Phone are required'
                 }, status=400)
             
             if Store.objects.filter(store_code=store_code).exists():
@@ -85,10 +86,10 @@ def store_create(request):
                     'message': f'Store code "{store_code}" already exists'
                 }, status=400)
             
-            brand = get_object_or_404(Brand, pk=brand_id)
+            company = get_object_or_404(Company, pk=company_id)
             
             store = Store.objects.create(
-                brand=brand,
+                company=company,
                 store_code=store_code,
                 store_name=store_name,
                 address=address,
@@ -98,6 +99,10 @@ def store_create(request):
                 longitude=float(longitude) if longitude else None,
                 is_active=is_active
             )
+            
+            # Add brands if provided
+            if brand_ids:
+                store.brands.set(brand_ids)
             
             messages.success(request, f'Store "{store.store_name}" created successfully!')
             
@@ -113,8 +118,9 @@ def store_create(request):
                 'message': str(e)
             }, status=500)
     
+    companies = Company.objects.filter(is_active=True).order_by('name')
     brands = Brand.objects.filter(is_active=True).select_related('company').order_by('name')
-    context = {'brands': brands}
+    context = {'companies': companies, 'brands': brands}
     return render(request, 'core/store/_form.html', context)
 
 
@@ -122,10 +128,11 @@ def store_create(request):
 @require_http_methods(["GET", "POST"])
 def store_update(request, pk):
     """Update existing store"""
-    store = get_object_or_404(Store.objects.select_related('brand', 'brand__company'), pk=pk)
+    store = get_object_or_404(Store.objects.select_related('company').prefetch_related('brands'), pk=pk)
     
     if request.method == 'POST':
         try:
+            brand_ids = request.POST.getlist('brand_ids')
             store_code = request.POST.get('store_code', '').strip()
             store_name = request.POST.get('store_name', '').strip()
             address = request.POST.get('address', '').strip()
@@ -157,6 +164,12 @@ def store_update(request, pk):
             store.is_active = is_active
             store.save()
             
+            # Update brands
+            if brand_ids:
+                store.brands.set(brand_ids)
+            else:
+                store.brands.clear()
+            
             messages.success(request, f'Store "{store.store_name}" updated successfully!')
             
             return JsonResponse({
@@ -171,9 +184,11 @@ def store_update(request, pk):
                 'message': str(e)
             }, status=500)
     
+    companies = Company.objects.filter(is_active=True).order_by('name')
     brands = Brand.objects.filter(is_active=True).select_related('company').order_by('name')
     context = {
         'store': store,
+        'companies': companies,
         'brands': brands
     }
     return render(request, 'core/store/_form.html', context)

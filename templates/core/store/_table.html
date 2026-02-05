@@ -28,8 +28,18 @@
                     <div class="text-xs text-gray-500">{{ store.timezone }}</div>
                 </td>
                 <td class="px-3 py-2">
-                    <div class="text-xs text-gray-900">{{ store.brand.name }}</div>
-                    <div class="text-xs text-gray-500">{{ store.brand.company.name }}</div>
+                    {% with active_brands=store.brands.all %}
+                        {% if active_brands %}
+                            <div class="text-xs text-gray-900">
+                                {% for brand in active_brands %}
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-800 mr-1 mb-1">{{ brand.name }}</span>{% if not forloop.last %} {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-xs text-gray-400">No brands</div>
+                        {% endif %}
+                    {% endwith %}
+                    <div class="text-xs text-gray-500">{{ store.company.name }}</div>
                 </td>
                 <td class="px-3 py-2">
                     <div class="text-xs text-gray-900">

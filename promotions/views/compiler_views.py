@@ -54,11 +54,11 @@ def compiler_dashboard(request):
         # Filter based on current_brand or user's brand/company
         current_brand = getattr(request, 'current_brand', None)
         if current_brand:
-            stores_qs = stores_qs.filter(brand=current_brand)
+            stores_qs = stores_qs.filter(brands=current_brand)
         elif request.user.brand:
-            stores_qs = stores_qs.filter(brand=request.user.brand)
+            stores_qs = stores_qs.filter(brands=request.user.brand)
         elif request.user.company:
-            stores_qs = stores_qs.filter(brand__company=request.user.company)
+            stores_qs = stores_qs.filter(company=request.user.company)
     
     stores = stores_qs.order_by('store_name')
     
@@ -237,7 +237,7 @@ def compile_for_store(request, store_id):
     Compile promotions for specific store
     """
     try:
-        store = Store.objects.get(id=store_id, brand__company=request.user.company)
+        store = Store.objects.get(id=store_id, company=request.user.company)
         
         compiler = PromotionCompiler()
         compiled = compiler.compile_for_store(str(store_id))
@@ -352,11 +352,11 @@ def api_documentation(request):
     else:
         current_brand = getattr(request, 'current_brand', None)
         if current_brand:
-            stores_qs = stores_qs.filter(brand=current_brand)
+            stores_qs = stores_qs.filter(brands=current_brand)
         elif request.user.brand:
-            stores_qs = stores_qs.filter(brand=request.user.brand)
+            stores_qs = stores_qs.filter(brands=request.user.brand)
         elif request.user.company:
-            stores_qs = stores_qs.filter(brand__company=request.user.company)
+            stores_qs = stores_qs.filter(company=request.user.company)
         
         sample_store = stores_qs.order_by('store_name').first()
     

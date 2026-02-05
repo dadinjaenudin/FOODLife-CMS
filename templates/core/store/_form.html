@@ -14,27 +14,75 @@
         </div>
     </div>
     
-    <!-- Brand Info -->
+    <!-- Company & Brands -->
     {% if store %}
     <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg text-xs text-blue-900">
-        <strong>Brand:</strong> {{ store.brand.name }} ({{ store.brand.company.name }})
+        <strong>Company:</strong> {{ store.company.name }}
     </div>
-    <input type="hidden" name="brand_id" value="{{ store.brand.id }}">
-    {% else %}
+    <input type="hidden" name="company_id" value="{{ store.company.id }}">
+    
+    <!-- Brands Selection (Multiple) -->
     <div>
-        <label for="brand_id" class="block text-xs font-medium text-gray-700 mb-1">
-            Brand <span class="text-red-500">*</span>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+            Brands (Multi-Brand Support)
+        </label>
+        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-white">
+            {% for brand in brands %}
+            <div class="flex items-center mb-1">
+                <input 
+                    type="checkbox" 
+                    name="brand_ids" 
+                    id="brand_{{ brand.id }}"
+                    value="{{ brand.id }}"
+                    {% if brand in store.brands.all %}checked{% endif %}
+                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="brand_{{ brand.id }}" class="ml-2 text-xs text-gray-700">
+                    {{ brand.name }} <span class="text-gray-500">({{ brand.company.name }})</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Select one or more brands for this store (Food Court scenario)</p>
+    </div>
+    {% else %}
+    <!-- Create Mode: Company & Brands -->
+    <div>
+        <label for="company_id" class="block text-xs font-medium text-gray-700 mb-1">
+            Company <span class="text-red-500">*</span>
         </label>
         <select 
-            name="brand_id" 
-            id="brand_id"
+            name="company_id" 
+            id="company_id"
             required
             class="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">Select Brand</option>
-            {% for brand in brands %}
-            <option value="{{ brand.id }}">{{ brand.name }} - {{ brand.company.name }}</option>
+            <option value="">Select Company</option>
+            {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
             {% endfor %}
         </select>
+    </div>
+    
+    <!-- Brands Selection (Multiple) -->
+    <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+            Brands (Multi-Brand Support)
+        </label>
+        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-white">
+            {% for brand in brands %}
+            <div class="flex items-center mb-1">
+                <input 
+                    type="checkbox" 
+                    name="brand_ids" 
+                    id="brand_{{ brand.id }}"
+                    value="{{ brand.id }}"
+                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="brand_{{ brand.id }}" class="ml-2 text-xs text-gray-700">
+                    {{ brand.name }} <span class="text-gray-500">({{ brand.company.name }})</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Select one or more brands for this store (Food Court scenario)</p>
     </div>
     {% endif %}
     

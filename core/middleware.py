@@ -9,15 +9,17 @@ class GlobalFilterMiddleware:
             # 0. Handle Store Scope (Highest Priority Restriction)
             if hasattr(request.user, 'store') and request.user.store:
                 # User is tied to a specific store
-                # Implicitly tied to that store's brand and company
+                # Implicitly tied to that store's company and brands
                 request.current_store = request.user.store
-                request.current_brand = request.user.store.brand
-                request.current_company = request.user.store.brand.company
+                # Get first active brand or None (multi-brand scenario)
+                active_brands = request.user.store.brands.filter(is_active=True)
+                request.current_brand = active_brands.first() if active_brands.exists() else None
+                request.current_company = request.user.store.company
                 
                 # Force session consistency (optional but good for other apps reading session)
                 if str(request.session.get('global_company_id')) != str(request.current_company.id):
                     request.session['global_company_id'] = str(request.current_company.id)
-                if str(request.session.get('global_brand_id')) != str(request.current_brand.id):
+                if request.current_brand and str(request.session.get('global_brand_id')) != str(request.current_brand.id):
                     request.session['global_brand_id'] = str(request.current_brand.id)
                     
             else:
@@ -86,9 +88,9 @@ class GlobalFilterMiddleware:
                 
                 if store_id:
                     try:
-                        request.current_store = Store.objects.get(id=store_id)
-                        # Validate store belongs to selected brand
-                        if request.current_brand and request.current_store.brand_id != request.current_brand.id:
+                        request.current_store = Store.objects.prefetch_related('brands').get(id=store_id)
+                        # Validate store has selected brand (many-to-many)
+                        if request.current_brand and not request.current_store.brands.filter(id=request.current_brand.id).exists():
                             request.current_store = None
                             del request.session['global_store_id']
                     except Store.DoesNotExist:
@@ -98,7 +100,7 @@ class GlobalFilterMiddleware:
                 else:
                     # No store selected - Auto-select first available store
                     if request.current_brand:
-                        available_stores = Store.objects.filter(is_active=True, brand=request.current_brand).order_by('store_name')
+                        available_stores = Store.objects.filter(is_active=True, brands=request.current_brand).order_by('store_name')
                         if available_stores.exists():
                             request.current_store = available_stores.first()
                             request.session['global_store_id'] = str(request.current_store.id)

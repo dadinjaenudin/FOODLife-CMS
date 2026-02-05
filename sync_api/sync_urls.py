@@ -28,6 +28,7 @@ urlpatterns = [
     path('companies/', sync_views.sync_companies, name='companies'),
     path('brands/', sync_views.sync_brands, name='brands'),
     path('stores/', sync_views.sync_stores, name='stores'),
+    path('store-brands/', sync_views.sync_store_brands, name='store_brands'),
     
     # Product Photo Sync endpoint
     path('product-photos/', sync_views.sync_product_photos, name='product_photos'),

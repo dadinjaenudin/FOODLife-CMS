@@ -122,10 +122,14 @@ class Brand(models.Model):
 class Store(models.Model):
     """
     Physical Location - Edge Server (SINGLETON per Edge)
+    Can host multiple brands (Food Court scenario)
     Example: Cabang BSD, Cabang Senayan
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name='stores')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='stores',
+                                help_text="Parent company that owns this store")
+    brands = models.ManyToManyField(Brand, through='StoreBrand', related_name='stores',
+                                    help_text="Brands/tenants operating in this store")
     store_code = models.CharField(max_length=20, unique=True, help_text="Store code (e.g., YGY-001-BSD)")
     store_name = models.CharField(max_length=200, help_text="Store name")
     address = models.TextField()
@@ -146,17 +150,55 @@ class Store(models.Model):
         verbose_name_plural = 'Stores'
         ordering = ['store_name']
         indexes = [
-            models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['company', 'is_active']),
             models.Index(fields=['store_code']),
         ]
     
     def __str__(self):
         return f"{self.store_code} - {self.store_name}"
     
-    @property
-    def company(self):
-        """Access company through brand"""
-        return self.brand.company
+    def get_active_brands(self):
+        """Get all active brands in this store"""
+        return self.brands.filter(is_active=True)
+    
+    def has_brand(self, brand):
+        """Check if this store has a specific brand"""
+        return self.brands.filter(id=brand.id).exists()
+
+
+class StoreBrand(models.Model):
+    """
+    Junction Table: Store ↔ Brand (Many-to-Many)
+    Represents which brands operate in which stores
+    Food Court scenario: 1 Store can have multiple Brands (tenants)
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='store_brands')
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name='brand_stores')
+    
+    # Operational status
+    is_active = models.BooleanField(default=True, help_text="Is this brand currently active in this store?")
+    
+    # Dates
+    start_date = models.DateField(null=True, blank=True, help_text="When this brand started operating in this store")
+    end_date = models.DateField(null=True, blank=True, help_text="When this brand stopped operating (if applicable)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'store_brand'
+        verbose_name = 'Store Brand'
+        verbose_name_plural = 'Store Brands'
+        unique_together = [['store', 'brand']]
+        indexes = [
+            models.Index(fields=['store', 'is_active']),
+            models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['store', 'brand', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.store.store_code} - {self.brand.name}"
 
 
 class User(AbstractUser):
@@ -251,5 +293,21 @@ class User(AbstractUser):
         if self.role_scope == 'company':
             return True  # Company scope can approve for all stores
         if self.role_scope == 'brand':
-            return self.brand == store.brand  # Brand scope for stores in their brand
-        return False  # Store scope cannot approve (or implement store-specific logic)
+            # Brand scope can approve if their brand operates in this store
+            return store.has_brand(self.brand) if self.brand else False
+        if self.role_scope == 'store':
+            return self.store == store  # Store scope only for their store
+        return False
+    
+    def get_accessible_brands_in_store(self, store):
+        """Get list of brands this user can access in a given store"""
+        if self.role_scope == 'company':
+            return store.get_active_brands()  # Company scope sees all brands
+        if self.role_scope == 'brand' and self.brand:
+            # Brand scope only sees their own brand if it's in the store
+            if store.has_brand(self.brand):
+                return [self.brand]
+            return []
+        if self.role_scope == 'store' and self.store == store:
+            return store.get_active_brands()  # Store staff sees all brands in their store
+        return []

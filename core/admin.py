@@ -5,7 +5,7 @@ Admin configuration for Core models
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from .models import Company, Brand, Store, User
+from .models import Company, Brand, Store, StoreBrand, User
 
 
 @admin.register(Company)
@@ -64,17 +64,25 @@ class BrandAdmin(admin.ModelAdmin):
     get_point_expiry.short_description = 'Point Expiry'
 
 
+class StoreBrandInline(admin.TabularInline):
+    model = StoreBrand
+    extra = 1
+    autocomplete_fields = ['brand']
+    fields = ['brand', 'is_active', 'start_date', 'end_date']
+
+
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ['store_code', 'store_name', 'brand', 'get_company', 'phone', 'is_active']
-    list_filter = ['brand__company', 'brand', 'is_active', 'created_at']
-    search_fields = ['store_code', 'store_name', 'brand__name', 'address']
+    list_display = ['store_code', 'store_name', 'company', 'get_brands', 'phone', 'is_active']
+    list_filter = ['company', 'is_active', 'created_at']
+    search_fields = ['store_code', 'store_name', 'brands__name', 'address']
     readonly_fields = ['id', 'created_at', 'updated_at']
-    autocomplete_fields = ['brand']
+    autocomplete_fields = ['company']
+    inlines = [StoreBrandInline]
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'brand', 'store_code', 'store_name', 'address', 'phone', 'timezone', 'is_active')
+            'fields': ('id', 'company', 'store_code', 'store_name', 'address', 'phone', 'timezone', 'is_active')
         }),
         ('Location', {
             'fields': ('latitude', 'longitude')
@@ -85,11 +93,37 @@ class StoreAdmin(admin.ModelAdmin):
         }),
     )
     
-    def get_company(self, obj):
-        """Display company through brand"""
-        return obj.company
-    get_company.short_description = 'Company'
-    get_company.admin_order_field = 'brand__company'
+    def get_brands(self, obj):
+        """Display all brands in this store"""
+        brands = obj.brands.filter(is_active=True)
+        if brands.exists():
+            return ', '.join([b.name for b in brands])
+        return '-'
+    get_brands.short_description = 'Active Brands'
+    get_brands.admin_order_field = 'brands__name'
+
+
+@admin.register(StoreBrand)
+class StoreBrandAdmin(admin.ModelAdmin):
+    list_display = ['store', 'brand', 'is_active', 'start_date', 'end_date', 'created_at']
+    list_filter = ['store__company', 'brand', 'is_active', 'start_date']
+    search_fields = ['store__store_code', 'store__store_name', 'brand__name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    autocomplete_fields = ['store', 'brand']
+    
+    fieldsets = (
+        ('Relationship', {
+            'fields': ('id', 'store', 'brand', 'is_active')
+        }),
+        ('Operation Period', {
+            'fields': ('start_date', 'end_date'),
+            'description': 'When this brand started/ended operating in this store'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(User)

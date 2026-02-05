@@ -33,57 +33,6 @@
 
     <!-- Floor Plan Container -->
     <div class="max-w-full px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Filters -->
-        <div class="bg-white rounded-lg shadow-sm border p-4 mb-6">
-            <form method="GET" class="flex flex-wrap items-end gap-4">
-                <!-- Store Filter -->
-                <div class="min-w-0">
-                    <label for="storeFilterForm" class="block text-xs font-medium text-gray-700 mb-1">Store</label>
-                    <select 
-                        name="store"
-                        id="storeFilterForm"
-                        class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onchange="this.form.submit()">
-                        <option value="">🏪 All Stores</option>
-                        {% for store in stores %}
-                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"s" %}selected{% endif %}>
-                            {{ store.brand.name }} - {{ store.store_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Brand Filter -->
-                <div class="min-w-0">
-                    <label for="brandFilter" class="block text-xs font-medium text-gray-700 mb-1">Brand</label>
-                    <select 
-                        name="brand"
-                        id="brandFilter"
-                        class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onchange="this.form.submit()">
-                        <option value="">🏢 All Brands</option>
-                        {% for store in stores %}
-                            {% if not store.brand.id in seen_brands %}
-                            <option value="{{ store.brand.id }}" {% if selected_brand == store.brand.id|stringformat:"s" %}selected{% endif %}>
-                                {{ store.brand.name }}
-                            </option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Clear Filter -->
-                {% if selected_store or selected_brand %}
-                <div>
-                    <a href="{% url 'tablearea:floor_plan' %}" 
-                       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                        <i class="fas fa-times mr-2"></i>Clear
-                    </a>
-                </div>
-                {% endif %}
-            </form>
-        </div>
-
         <!-- Stats Overview -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white rounded-lg shadow p-4 text-center">

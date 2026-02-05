@@ -50,7 +50,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No active brand found. Run generate_sample_data first.'))
             return
         
-        store = Store.objects.filter(brand=brand, is_active=True).first()
+        store = Store.objects.filter(brands=brand, is_active=True).first()
         if not store:
             self.stdout.write(self.style.ERROR('No active store found. Run generate_sample_data first.'))
             return

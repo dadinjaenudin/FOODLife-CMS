@@ -58,7 +58,7 @@ def index(request):
     if Store:
         try:
             context['total_stores'] = Store.objects.filter(
-                brand__company=user_company
+                company=user_company
             ).count() if user_company else Store.objects.count()
         except:
             pass

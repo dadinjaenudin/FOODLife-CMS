@@ -30,7 +30,7 @@ def brand_list(request):
     
     # Base queryset with company relation
     brands = Brand.objects.select_related('company').annotate(
-        store_count=Count('stores')
+        store_count=Count('brand_stores', distinct=True)
     )
     
     # Apply search filter
@@ -225,11 +225,11 @@ def brand_delete(request, pk):
     
     try:
         # Get counts for info message
-        store_count = brand.stores.count()
+        store_count = brand.brand_stores.count()
         user_count = brand.users.count()
         brand_name = brand.name
         
-        # Delete brand (will cascade delete stores and set users.brand to NULL)
+        # Delete brand (will cascade delete store_brands relations and set users.brand to NULL)
         brand.delete()
         
         msg_parts = [f'Brand "{brand_name}" deleted successfully']

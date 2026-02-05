@@ -612,9 +612,9 @@ class PromotionCompiler:
         
         # Get all active stores for this company
         stores = Store.objects.filter(
-            brand__company=company,
+            company=company,
             is_active=True
-        ).select_related('brand').order_by('brand__name', 'store_name')
+        ).select_related('company').prefetch_related('brands').order_by('company__name', 'store_name')
         
         logger.info(f"Compiling promotions for company {company.name} ({stores.count()} stores)")
         

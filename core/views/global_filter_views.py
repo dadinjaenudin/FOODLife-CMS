@@ -23,7 +23,7 @@ def set_global_filter(request):
     # Case 1: Store is selected → Auto-fill Brand and Company from Store
     if store_id:
         try:
-            store = Store.objects.select_related('brand', 'brand__company').get(id=store_id, is_active=True)
+            store = Store.objects.select_related('company').prefetch_related('brands').get(id=store_id, is_active=True)
             request.session['global_store_id'] = store_id
             request.session['global_brand_id'] = str(store.brand.id)
             request.session['global_company_id'] = str(store.brand.company.id)

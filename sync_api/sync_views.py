@@ -16,7 +16,7 @@ from drf_spectacular.types import OpenApiTypes
 from promotions.models import Promotion
 from promotions.models_settings import PromotionSyncSettings
 from promotions.services.compiler import PromotionCompiler
-from core.models import Store, Company, Brand
+from core.models import Store, Company, Brand, StoreBrand
 from products.models import Category, Product
 from datetime import timedelta
 import logging
@@ -69,7 +69,8 @@ logger = logging.getLogger('promotions.sync_api')
                 'brand_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -113,10 +114,11 @@ def sync_promotions(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id)
-            # Get brand_id from store if not provided
+            store = Store.objects.prefetch_related('brands').get(id=store_id, company_id=company_id)
+            # Get brand_id from first active brand if not provided
             if not brand_id:
-                brand_id = store.brand_id
+                first_brand = store.brands.filter(is_active=True).first()
+                brand_id = first_brand.id if first_brand else None
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -284,7 +286,8 @@ def sync_promotions(request):
                 'brand_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -320,7 +323,7 @@ def sync_categories(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -354,25 +357,22 @@ def sync_categories(request):
                     'code': 'INVALID_DATE_FORMAT'
                 }, status=status.HTTP_400_BAD_REQUEST)
         
-        categories = Category.objects.filter(query).select_related('brand').values(
-            'id', 'brand_id', 'brand__company_id', 'name', 
-            'parent_id', 'is_active', 'sort_order',
-            'created_at', 'updated_at'
-        )
+        categories = Category.objects.filter(query).select_related('brand')
         
         # Convert to list and rename brand__company_id to company_id
         category_list = []
         for cat in categories:
             category_list.append({
-                'id': str(cat['id']),
-                'company_id': str(cat['brand__company_id']),
-                'brand_id': str(cat['brand_id']),
-                'name': cat['name'],
-                'parent_id': str(cat['parent_id']) if cat['parent_id'] else None,
-                'is_active': cat['is_active'],
-                'sort_order': cat['sort_order'],
-                'created_at': cat['created_at'].isoformat(),
-                'updated_at': cat['updated_at'].isoformat(),
+                'id': str(cat.id),
+                'company_id': str(cat.brand.company_id),
+                'brand_id': str(cat.brand_id),
+                'name': cat.name,
+                'parent_id': str(cat.parent_id) if cat.parent_id else None,
+                'icon': cat.icon or '',
+                'sort_order': cat.sort_order,
+                'is_active': cat.is_active,
+                'created_at': cat.created_at.isoformat(),
+                'updated_at': cat.updated_at.isoformat(),
             })
         
         return Response({
@@ -432,7 +432,8 @@ def sync_categories(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -467,7 +468,7 @@ def sync_products(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -497,29 +498,30 @@ def sync_products(request):
                     'code': 'INVALID_DATE_FORMAT'
                 }, status=status.HTTP_400_BAD_REQUEST)
         
-        products = Product.objects.filter(query).values(
-            'id', 'company_id', 'brand_id', 'category_id',
-            'name', 'sku', 'price', 'cost', 'is_active', 
-            'description', 'created_at', 'updated_at'
-        )
+        products = Product.objects.filter(query).select_related('category')
         
         # Convert to list and add store_id from context
         product_list = []
         for prod in products:
             product_list.append({
-                'id': str(prod['id']),
-                'company_id': str(prod['company_id']),
-                'brand_id': str(prod['brand_id']),
-                'category_id': str(prod['category_id']),
+                'id': str(prod.id),
+                'company_id': str(prod.company_id),
+                'brand_id': str(prod.brand_id),
+                'category_id': str(prod.category_id) if prod.category_id else None,
                 'store_id': str(store_id),  # Add store_id from request context
-                'name': prod['name'],
-                'sku': prod['sku'],
-                'price': str(prod['price']),
-                'cost': str(prod['cost']),
-                'is_active': prod['is_active'],
-                'description': prod['description'] or '',
-                'created_at': prod['created_at'].isoformat(),
-                'updated_at': prod['updated_at'].isoformat(),
+                'sku': prod.sku,
+                'name': prod.name,
+                'description': prod.description or '',
+                'image': request.build_absolute_uri(prod.image.url) if prod.image else None,
+                'price': str(prod.price),
+                'cost': str(prod.cost),
+                'printer_target': prod.printer_target,
+                'track_stock': prod.track_stock,
+                'stock_quantity': str(prod.stock_quantity),
+                'is_active': prod.is_active,
+                'sort_order': prod.sort_order,
+                'created_at': prod.created_at.isoformat(),
+                'updated_at': prod.updated_at.isoformat(),
             })
         
         return Response({
@@ -565,7 +567,8 @@ def sync_products(request):
             'Get Version Info',
             value={'company_id': '812e76b6-f235-4bb2-948a-cae58ee62b97'}
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -678,7 +681,8 @@ def sync_version(request):
                 ]
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -754,7 +758,8 @@ def upload_usage(request):
             'Sync All Companies',
             value={}
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -800,6 +805,9 @@ def sync_companies(request):
                 'id': str(company.id),
                 'code': company.code,
                 'name': company.name,
+                'address': company.address or '',
+                'phone': company.phone or '',
+                'tax_id': company.tax_id or '',
                 'timezone': company.timezone,
                 'is_active': company.is_active,
                 'point_expiry_months': company.point_expiry_months,
@@ -849,7 +857,8 @@ def sync_companies(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -914,7 +923,7 @@ def sync_brands(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -1010,7 +1019,8 @@ def sync_brands(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1079,12 +1089,12 @@ def sync_stores(request):
             }, status=status.HTTP_404_NOT_FOUND)
         
         store = None
-        query = Q(brand__company_id=company_id, is_active=True)
+        query = Q(company_id=company_id, is_active=True)
         
         if store_id:
             # Verify store exists and belongs to company
             try:
-                store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+                store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
             except Store.DoesNotExist:
                 return Response({
                     'error': 'Store not found or does not belong to the specified company',
@@ -1095,18 +1105,20 @@ def sync_stores(request):
             query &= Q(id=store_id)
         
         # Get stores
-        stores = Store.objects.filter(query).select_related('brand__company').order_by('store_name')
+        stores = Store.objects.filter(query).select_related('company').prefetch_related('brands').order_by('store_name')
         
         store_list = []
         for store in stores:
+            # Get first active brand for legacy compatibility
+            first_brand = store.brands.filter(is_active=True).first()
             store_list.append({
                 'id': str(store.id),
-                'brand_id': str(store.brand.id),
-                'brand_code': store.brand.code,
-                'brand_name': store.brand.name,
-                'company_id': str(store.brand.company.id),
-                'company_code': store.brand.company.code,
-                'company_name': store.brand.company.name,
+                'brand_id': str(first_brand.id) if first_brand else None,
+                'brand_code': first_brand.code if first_brand else None,
+                'brand_name': first_brand.name if first_brand else None,
+                'company_id': str(store.company.id),
+                'company_code': store.company.code,
+                'company_name': store.company.name,
                 'store_code': store.store_code,
                 'store_name': store.store_name,
                 'address': store.address,
@@ -1155,6 +1167,212 @@ def sync_stores(request):
                 'company_id': {
                     'type': 'string',
                     'format': 'uuid',
+                    'description': 'Company UUID to filter store brands'
+                },
+                'store_id': {
+                    'type': 'string',
+                    'format': 'uuid',
+                    'description': 'Store UUID to filter store brands'
+                },
+                'updated_since': {
+                    'type': 'string',
+                    'format': 'date-time',
+                    'description': 'Last sync timestamp for incremental sync (optional)'
+                }
+            },
+            'required': ['company_id', 'store_id']
+        }
+    },
+    responses={
+        200: {
+            'description': 'Successful response with store brands data',
+            'content': {
+                'application/json': {
+                    'example': {
+                        'store_brands': [
+                            {
+                                'id': 'uuid',
+                                'store_id': 'uuid',
+                                'store_code': 'YGY-001-BSD',
+                                'store_name': 'Cabang BSD',
+                                'brand_id': 'uuid',
+                                'brand_code': 'YGY-001',
+                                'brand_name': 'Ayam Geprek Express',
+                                'company_id': 'uuid',
+                                'is_active': True,
+                                'start_date': '2024-01-01',
+                                'end_date': None,
+                                'created_at': '2024-01-01T00:00:00Z',
+                                'updated_at': '2024-01-01T00:00:00Z'
+                            }
+                        ],
+                        'total': 1,
+                        'sync_timestamp': '2024-01-15T10:30:00Z'
+                    }
+                }
+            }
+        },
+        400: {'description': 'Bad request - missing or invalid parameters'},
+        404: {'description': 'Company/Store/Brand not found'},
+        500: {'description': 'Internal server error'}
+    },
+    tags=['Sync API - Master Data'],
+    summary='Sync Store-Brand Relationships',
+    description='Get store-brand junction table data for multi-brand stores (e.g., Food Courts)'
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sync_store_brands(request):
+    """
+    Get store-brand relationships filtered by company and store
+    
+    POST /api/v1/sync/store-brands/
+    
+    Request Body:
+    {
+        "company_id": "uuid",
+        "store_id": "uuid",
+        "updated_since": "2024-01-01T00:00:00Z"  # optional
+    }
+    
+    Returns:
+        - store_brands: List of store-brand junction records
+        - total: Total number of records
+        - sync_timestamp: Current server timestamp
+    
+    Response Format:
+    {
+        "store_brands": [
+            {
+                "id": "uuid",
+                "store_id": "uuid",
+                "store_code": "YGY-001-BSD",
+                "store_name": "Cabang BSD",
+                "brand_id": "uuid",
+                "brand_code": "YGY-001",
+                "brand_name": "Ayam Geprek Express",
+                "company_id": "uuid",
+                "is_active": true,
+                "start_date": "2024-01-01",
+                "end_date": null,
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T00:00:00Z"
+            }
+        ],
+        "total": 1,
+        "sync_timestamp": "2024-01-15T10:30:00Z"
+    }
+    """
+    try:
+        # Validate required parameters
+        company_id = request.data.get('company_id')
+        store_id = request.data.get('store_id')
+        updated_since = request.data.get('updated_since')
+        
+        if not company_id:
+            return Response({
+                'error': 'Missing required parameter: company_id in request body',
+                'code': 'MISSING_COMPANY_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not store_id:
+            return Response({
+                'error': 'Missing required parameter: store_id in request body',
+                'code': 'MISSING_STORE_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate company exists
+        try:
+            company = Company.objects.get(id=company_id, is_active=True)
+        except Company.DoesNotExist:
+            return Response({
+                'error': f'Company not found: {company_id}',
+                'code': 'COMPANY_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validate store exists and belongs to company
+        try:
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
+        except Store.DoesNotExist:
+            return Response({
+                'error': 'Store not found or does not belong to the specified company',
+                'code': 'STORE_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Build query - filter by company and store
+        query = Q(store_id=store_id, store__company_id=company_id, store__is_active=True)
+        
+        # Optional updated_since filter for incremental sync
+        if updated_since:
+            try:
+                updated_since_dt = datetime.fromisoformat(updated_since.replace('Z', '+00:00'))
+                query &= Q(updated_at__gte=updated_since_dt)
+            except (ValueError, AttributeError):
+                return Response({
+                    'error': 'Invalid date format for updated_since. Use ISO 8601 format.',
+                    'code': 'INVALID_DATE_FORMAT'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get store brands with related data
+        store_brands = StoreBrand.objects.filter(query).select_related(
+            'store', 'store__company', 'brand'
+        ).order_by('store__store_name', 'brand__name')
+        
+        store_brand_list = []
+        for sb in store_brands:
+            store_brand_list.append({
+                'id': str(sb.id),
+                'store_id': str(sb.store_id),
+                'store_code': sb.store.store_code,
+                'store_name': sb.store.store_name,
+                'brand_id': str(sb.brand_id),
+                'brand_code': sb.brand.code,
+                'brand_name': sb.brand.name,
+                'company_id': str(sb.store.company_id),
+                'is_active': sb.is_active,
+                'start_date': sb.start_date.isoformat() if sb.start_date else None,
+                'end_date': sb.end_date.isoformat() if sb.end_date else None,
+                'created_at': sb.created_at.isoformat(),
+                'updated_at': sb.updated_at.isoformat(),
+            })
+        
+        return Response({
+            'store_brands': store_brand_list,
+            'total': len(store_brand_list),
+            'company': {
+                'id': str(company.id),
+                'code': company.code,
+                'name': company.name,
+            },
+            'store': {
+                'id': str(store.id),
+                'code': store.store_code,
+                'name': store.store_name,
+            },
+            'filter': {
+                'company_id': str(company_id),
+                'store_id': str(store_id),
+                'updated_since': updated_since,
+            },
+            'sync_timestamp': timezone.now().isoformat(),
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in sync_store_brands: {str(e)}", exc_info=True)
+        return Response({
+            'error': 'Internal server error',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'company_id': {
+                    'type': 'string',
+                    'format': 'uuid',
                     'description': 'Company UUID to filter tables'
                 },
                 'store_id': {
@@ -1179,7 +1397,8 @@ def sync_stores(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1222,7 +1441,7 @@ def sync_tables(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to specified company',
@@ -1294,6 +1513,9 @@ def sync_tables(request):
                 'id': str(table.id),
                 'area_id': str(table.area_id),
                 'area_name': table.area.name,
+                'brand_id': str(table.area.brand_id),
+                'company_id': str(table.area.company_id),
+                'store_id': str(table.area.store_id) if table.area.store_id else None,
                 'number': table.number,
                 'capacity': table.capacity,
                 'qr_code': table.qr_code,
@@ -1370,7 +1592,8 @@ def sync_tables(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1412,7 +1635,7 @@ def sync_table_areas(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -1526,7 +1749,8 @@ def sync_table_areas(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1569,7 +1793,7 @@ def sync_table_groups(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -1620,6 +1844,7 @@ def sync_table_groups(request):
             group_list.append({
                 'id': str(group.id),
                 'brand_id': str(group.brand_id),
+                'company_id': str(group.brand.company_id),
                 'main_table_id': str(group.main_table_id),
                 'main_table_number': group.main_table.number,
                 'created_by_id': str(group.created_by_id),
@@ -1686,7 +1911,8 @@ def sync_table_groups(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1726,7 +1952,7 @@ def sync_modifiers(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -1846,7 +2072,8 @@ def sync_modifiers(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1889,7 +2116,7 @@ def sync_modifier_options(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -2002,7 +2229,8 @@ def sync_modifier_options(request):
                 'store_id': 'uuid-here'
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2042,7 +2270,7 @@ def sync_product_modifiers(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',
@@ -2078,6 +2306,8 @@ def sync_product_modifiers(request):
                 'product_id': str(pm.product_id),
                 'product_name': pm.product.name,
                 'product_sku': pm.product.sku,
+                'brand_id': str(pm.product.brand_id),
+                'company_id': str(pm.product.company_id),
                 'modifier_id': str(pm.modifier_id),
                 'modifier_name': pm.modifier.name,
                 'sort_order': pm.sort_order,
@@ -2150,7 +2380,8 @@ def sync_product_modifiers(request):
                 'offset': 0
             }
         )
-    ]
+    ],
+    tags=['Sync API - Master Data']
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2198,7 +2429,7 @@ def sync_product_photos(request):
         
         # Verify store exists and belongs to company
         try:
-            store = Store.objects.get(id=store_id, brand__company_id=company_id, is_active=True)
+            store = Store.objects.get(id=store_id, company_id=company_id, is_active=True)
         except Store.DoesNotExist:
             return Response({
                 'error': 'Store not found or does not belong to the specified company',

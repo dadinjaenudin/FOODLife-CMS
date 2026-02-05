@@ -1,0 +1,3388 @@
+openapi: 3.0.3
+info:
+  title: F&B POS HO System API
+  version: 1.0.0
+  description: "\n# F&B POS Head Office API Documentation\n\nMulti-Tenant Cloud-Based\
+    \ Head Office System untuk F&B POS.\n\n## Architecture Overview\n\n```\n┌─────────────────────────────────────────┐\n\
+    │         HO (Cloud - Django)             │\n│  ┌──────────────────────────────────┐\
+    \  │\n│  │ Master Data Management           │  │\n│  │ - Company / Brand / Store\
+    \        │  │\n│  │ - Products / Categories          │  │\n│  │ - Members / Loyalty\
+    \              │  │\n│  │ - Promotions (12+ types)         │  │\n│  │ - Inventory\
+    \ / Recipes (BOM)      │  │\n│  └──────────────────────────────────┘  │\n│  ┌──────────────────────────────────┐\
+    \  │\n│  │ REST API (JWT Auth)              │  │\n│  │ - HO → Edge: Master data\
+    \ pull    │  │\n│  │ - Edge → HO: Transaction push    │  │\n│  └──────────────────────────────────┘\
+    \  │\n│  ┌──────────────────────────────────┐  │\n│  │ Analytics & Reporting \
+    \           │  │\n│  │ - Daily sales, product analysis  │  │\n│  │ - Promotion\
+    \ performance          │  │\n│  │ - Member analytics, COGS         │  │\n│  └──────────────────────────────────┘\
+    \  │\n└─────────────────────────────────────────┘\n              ↕ REST API (HTTPS)\n\
+    ┌─────────────────────────────────────────┐\n│   Edge Server (Per Store - Django)\
+    \      │\n│  - POS UI (HTMX)                        │\n│  - Offline-first (LAN\
+    \ only)             │\n│  - Pull master data from HO (periodic)  │\n│  - Push\
+    \ transactions to HO (async)      │\n└─────────────────────────────────────────┘\n\
+    ```\n\n## Authentication\n\nAll API endpoints require JWT authentication:\n\n\
+    1. **Obtain Token**: `POST /api/token/`\n   ```json\n   {\n     \"username\":\
+    \ \"your_username\",\n     \"password\": \"your_password\"\n   }\n   ```\n\n2.\
+    \ **Use Token**: Add to headers:\n   ```\n   Authorization: Bearer <your_access_token>\n\
+    \   ```\n\n3. **Refresh Token**: `POST /api/token/refresh/`\n   ```json\n   {\n\
+    \     \"refresh\": \"your_refresh_token\"\n   }\n   ```\n\n## Multi-Tenant Architecture\n\
+    \n- **Company**: Root tenant (e.g., Yogya Group)\n- **Brand**: Business concept\
+    \ (e.g., Ayam Geprek Express)\n- **Store**: Physical location (e.g., BSD Store)\n\
+    - **User**: Role-based access with scope (GLOBAL, COMPANY, BRAND, STORE)\n\n##\
+    \ Key Features\n\n### Master Data Management\n- Company, Brand, Store hierarchy\n\
+    - Product catalog with categories, modifiers\n- Member loyalty program\n- Promotion\
+    \ engine (12+ types)\n- Inventory & recipe management (BOM)\n\n### Sync API (HO\
+    \ ↔ Edge)\n- **HO → Edge**: Master data pull with incremental sync\n- **Edge →\
+    \ HO**: Transaction data push (async)\n- JWT authentication with brand/store filtering\n\
+    \n### Promotion Engine\n- 12+ promotion types (BOGO, Happy Hour, Package, etc.)\n\
+    - Multi-brand scope support\n- Stacking rules & conflict resolution\n- Manager\
+    \ approval workflow\n- Explainability logs\n\n### Member Loyalty\n- Auto-generated\
+    \ member codes\n- Points earn/redeem/topup/payment\n- Tier system (Bronze, Silver,\
+    \ Gold, Platinum)\n- Points expiry automation\n- Full audit trail\n\n## API Versioning\n\
+    \nCurrent version: **v1**\n\nBase URL: `/api/v1/`\n\n## Rate Limiting\n\n- 1000\
+    \ requests per hour per user\n- 100 requests per minute per IP\n\n## Error Handling\n\
+    \nStandard HTTP status codes with detailed error messages:\n\n```json\n{\n  \"\
+    error\": \"Validation failed\",\n  \"details\": {\n    \"field_name\": [\"This\
+    \ field is required.\"]\n  },\n  \"code\": \"validation_error\"\n}\n```\n\n##\
+    \ Support\n\nFor API support, contact: dev@company.com\n    "
+  contact:
+    name: Yogya Group IT Team
+    email: info@yogyagroup.com
+  license:
+    name: Proprietary
+paths:
+  /api/v1/analytics/cashier-performance/:
+    get:
+      operationId: analytics_cashier_performance_retrieve
+      description: |-
+        Cashier Performance Report
+        Query params: start_date, end_date, store_id (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/daily-sales/:
+    get:
+      operationId: analytics_daily_sales_retrieve
+      description: |-
+        Daily Sales Report
+        Query params: start_date, end_date, store_id (optional), brand_id (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/inventory-cogs/:
+    get:
+      operationId: analytics_inventory_cogs_retrieve
+      description: |-
+        Inventory COGS & Margin Analysis
+        Query params: start_date, end_date, brand_id
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/member-analytics/:
+    get:
+      operationId: analytics_member_analytics_retrieve
+      description: |-
+        Member Loyalty Analytics
+        Query params: company_id, tier (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/payment-methods/:
+    get:
+      operationId: analytics_payment_methods_retrieve
+      description: |-
+        Payment Method Distribution Report
+        Query params: start_date, end_date, store_id (optional), brand_id (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/product-sales/:
+    get:
+      operationId: analytics_product_sales_retrieve
+      description: |-
+        Product Sales Analysis
+        Query params: start_date, end_date, brand_id, category_id (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/analytics/promotion-performance/:
+    get:
+      operationId: analytics_promotion_performance_retrieve
+      description: |-
+        Promotion Performance Report
+        Query params: start_date, end_date, brand_id (optional)
+      tags:
+      - analytics
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/products/categories/:
+    get:
+      operationId: products_categories_list
+      description: Category master data - Edge pulls categories
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryList'
+          description: ''
+  /api/v1/products/categories/{id}/:
+    get:
+      operationId: products_categories_retrieve
+      description: Category master data - Edge pulls categories
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Category.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/products/categories/sync/:
+    get:
+      operationId: products_categories_sync_retrieve
+      description: |-
+        Sync categories for Edge (Food Court architecture)
+
+        Query params:
+        - company_id (required): Company ID for the edge location
+        - store_id (optional): Store ID (for reference)
+        - brand_id (optional): Filter by specific brand
+        - last_sync (optional): ISO datetime for incremental sync
+
+        Categories are brand-scoped, so Edge gets all categories from all brands in the company
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/products/kitchen-stations/:
+    get:
+      operationId: products_kitchen_stations_list
+      description: Kitchen station master data
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedKitchenStationList'
+          description: ''
+  /api/v1/products/kitchen-stations/{id}/:
+    get:
+      operationId: products_kitchen_stations_retrieve
+      description: Kitchen station master data
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Kitchen Station.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenStation'
+          description: ''
+  /api/v1/products/kitchen-stations/sync/:
+    get:
+      operationId: products_kitchen_stations_sync_retrieve
+      description: |-
+        Sync kitchen stations for Edge (STORE-SPECIFIC)
+
+        Query params:
+        - company_id (required): Company ID for the edge location
+        - store_id (required): Store ID - Kitchen stations are store-specific
+
+        Kitchen stations are ALWAYS store-specific (not company-wide or brand-wide)
+        Each store has its own kitchen configuration
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenStation'
+          description: ''
+  /api/v1/products/modifiers/:
+    get:
+      operationId: products_modifiers_list
+      description: Modifier master data - Edge pulls modifiers with options and product
+        mappings
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModifierList'
+          description: ''
+  /api/v1/products/modifiers/{id}/:
+    get:
+      operationId: products_modifiers_retrieve
+      description: Modifier master data - Edge pulls modifiers with options and product
+        mappings
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Modifier.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Modifier'
+          description: ''
+  /api/v1/products/modifiers/sync/:
+    get:
+      operationId: products_modifiers_sync_retrieve
+      description: |-
+        Sync modifiers for Edge (Food Court architecture)
+
+        Supports both GET and POST methods
+
+        Query params (GET) or Body (POST):
+        - company_id (required): Company ID for the edge location
+        - store_id (optional): Store ID (for reference)
+        - brand_id (optional): Filter by specific brand
+        - last_sync (optional): ISO datetime for incremental sync
+
+        Returns:
+        - modifiers: List of modifier groups with their options
+        - product_modifiers: M2M mapping of products to modifiers
+        - total: Count of modifiers
+        - total_mappings: Count of product-modifier mappings
+        - sync_timestamp: Current server timestamp
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Modifier'
+          description: ''
+    post:
+      operationId: products_modifiers_sync_create
+      description: |-
+        Sync modifiers for Edge (Food Court architecture)
+
+        Supports both GET and POST methods
+
+        Query params (GET) or Body (POST):
+        - company_id (required): Company ID for the edge location
+        - store_id (optional): Store ID (for reference)
+        - brand_id (optional): Filter by specific brand
+        - last_sync (optional): ISO datetime for incremental sync
+
+        Returns:
+        - modifiers: List of modifier groups with their options
+        - product_modifiers: M2M mapping of products to modifiers
+        - total: Count of modifiers
+        - total_mappings: Count of product-modifier mappings
+        - sync_timestamp: Current server timestamp
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifierRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModifierRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModifierRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Modifier'
+          description: ''
+  /api/v1/products/printers/:
+    get:
+      operationId: products_printers_list
+      description: Printer config master data
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPrinterConfigList'
+          description: ''
+  /api/v1/products/printers/{id}/:
+    get:
+      operationId: products_printers_retrieve
+      description: Printer config master data
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Printer Config.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrinterConfig'
+          description: ''
+  /api/v1/products/printers/sync/:
+    get:
+      operationId: products_printers_sync_retrieve
+      description: Sync printer configs
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrinterConfig'
+          description: ''
+  /api/v1/products/products/:
+    get:
+      operationId: products_products_list
+      description: Product master data - Edge pulls products with photos & modifiers
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductList'
+          description: ''
+  /api/v1/products/products/{id}/:
+    get:
+      operationId: products_products_retrieve
+      description: Product master data - Edge pulls products with photos & modifiers
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Product.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+  /api/v1/products/products/sync/:
+    get:
+      operationId: products_products_sync_retrieve
+      description: |-
+        Sync products for Edge (Food Court architecture)
+
+        Query params:
+        - company_id (required): Company ID for the edge location
+        - store_id (optional): Store ID for store-specific filtering
+        - brand_id (optional): Filter by specific brand (for single-brand sync)
+        - last_sync (optional): ISO datetime for incremental sync
+        - category_id (optional): Filter by category
+
+        Food Court: Edge has 1 company + 1 store + multiple brands
+        Edge sends company_id + store_id to get all products from all brands in that store
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+  /api/v1/products/table-areas/:
+    get:
+      operationId: products_table_areas_list
+      description: Table area master data
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTableAreaList'
+          description: ''
+  /api/v1/products/table-areas/{id}/:
+    get:
+      operationId: products_table_areas_retrieve
+      description: Table area master data
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Table Area.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+          description: ''
+  /api/v1/products/table-areas/sync/:
+    get:
+      operationId: products_table_areas_sync_retrieve
+      description: |-
+        Sync table areas for Edge (Food Court architecture)
+
+        Query params:
+        - company_id (required): Company ID for the edge location
+        - store_id (required): Store ID - Table areas are store-specific
+        - brand_id (optional): Filter by specific brand (for multi-brand food court)
+
+        Table areas can be:
+        - Store-specific (most common for food courts)
+        - Brand-specific within a store
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+          description: ''
+  /api/v1/products/tables/:
+    get:
+      operationId: products_tables_list
+      description: Table master data (template only, status managed by Edge)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTableList'
+          description: ''
+  /api/v1/products/tables/{id}/:
+    get:
+      operationId: products_tables_retrieve
+      description: Table master data (template only, status managed by Edge)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Table.
+        required: true
+      tags:
+      - products
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+          description: ''
+  /api/v1/products/tables/{id}/update_position/:
+    post:
+      operationId: products_tables_update_position_create
+      description: |-
+        Update table position on floor plan
+
+        POST body:
+        {
+            "pos_x": 100,
+            "pos_y": 150
+        }
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Table.
+        required: true
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TableRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+          description: ''
+  /api/v1/products/tables/sync/:
+    get:
+      operationId: products_tables_sync_retrieve
+      description: |-
+        Sync tables for Edge (Food Court architecture)
+
+        Query params:
+        - company_id (required): Company ID for the edge location
+        - store_id (required): Store ID - Tables are linked to table areas (store-specific)
+        - brand_id (optional): Filter by specific brand
+
+        Tables belong to table areas, which are store-specific
+      tags:
+      - products
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+          description: ''
+  /api/v1/sync/brands/:
+    post:
+      operationId: sync_brands_create
+      description: |-
+        Get brands filtered by company and store (for food court concept)
+
+        POST /api/v1/sync/brands/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid"
+        }
+
+        Returns:
+            - brands: List of brand objects
+            - total: Total number of brands
+            - sync_timestamp: Current server timestamp
+
+        Response Format:
+        {
+            "brands": [
+                {
+                    "id": "uuid",
+                    "company_id": "uuid",
+                    "company_code": "YGY",
+                    "company_name": "Yogya Group",
+                    "code": "YGY-001",
+                    "name": "Ayam Geprek Express",
+                    "address": "Jl. Contoh No. 123",
+                    "phone": "021-1234567",
+                    "tax_id": "01.234.567.8-901.000",
+                    "tax_rate": "11.00",
+                    "service_charge": "5.00",
+                    "point_expiry_months_override": null,
+                    "is_active": true,
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-01T00:00:00Z"
+                }
+            ],
+            "total": 1,
+            "sync_timestamp": "2024-01-15T10:30:00Z"
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter brands
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter brands
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncBrands:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Brands
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/categories/:
+    post:
+      operationId: sync_categories_create
+      description: |-
+        Get categories for Edge Server (for food court concept)
+
+        POST /api/v1/sync/categories/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "brand_id": "uuid",  // optional
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter categories
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter categories
+                brand_id:
+                  type: string
+                  format: uuid
+                  description: Brand UUID to filter categories (optional)
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncCategories:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Categories
+              SyncCategoriesWithBrand:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                  brand_id: uuid-here
+                summary: Sync Categories with Brand
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/companies/:
+    post:
+      operationId: sync_companies_create
+      description: |-
+        Get all active companies
+
+        POST /api/v1/sync/companies/
+
+        Request Body: {}  // empty body
+
+        Returns:
+            - companies: List of company objects
+            - total: Total number of companies
+            - sync_timestamp: Current server timestamp
+
+        Response Format:
+        {
+            "companies": [
+                {
+                    "id": "uuid",
+                    "code": "YGY",
+                    "name": "Yogya Group",
+                    "timezone": "Asia/Jakarta",
+                    "is_active": true,
+                    "point_expiry_months": 12,
+                    "points_per_currency": "1.00",
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-01T00:00:00Z"
+                }
+            ],
+            "total": 1,
+            "sync_timestamp": "2024-01-15T10:30:00Z"
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+            examples:
+              SyncAllCompanies:
+                value: {}
+                summary: Sync All Companies
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/modifier-options/:
+    post:
+      operationId: sync_modifier_options_create
+      description: |-
+        Get modifier options for Edge Server (for food court concept)
+
+        POST /api/v1/sync/modifier-options/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+
+        Returns:
+            - modifier_options: List of modifier options
+            - total: Total number of options
+            - sync_timestamp: Current server timestamp
+
+        Note: This is useful for incremental sync of options only.
+        For full sync, use /sync/modifiers/ which includes options.
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter modifier options
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter modifier options
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncModifierOptions:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Modifier Options
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/modifiers/:
+    post:
+      operationId: sync_modifiers_create
+      description: |-
+        Get modifiers for Edge Server (for food court concept)
+
+        POST /api/v1/sync/modifiers/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+
+        Returns:
+            - modifiers: List of modifier groups with their options
+            - total: Total number of modifiers
+            - sync_timestamp: Current server timestamp
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter modifiers
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter modifiers
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncModifiers:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Modifiers
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/product-modifiers/:
+    post:
+      operationId: sync_product_modifiers_create
+      description: |-
+        Get product-modifier relationships for Edge Server (for food court concept)
+
+        POST /api/v1/sync/product-modifiers/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+
+        Returns:
+            - product_modifiers: List of product-modifier relationships
+            - total: Total number of relationships
+            - sync_timestamp: Current server timestamp
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter product modifiers
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter product modifiers
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncProductModifiers:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Product Modifiers
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/product-photos/:
+    post:
+      operationId: sync_product_photos_create
+      description: |-
+        Get list of product photos for synchronization to Edge Server
+
+        POST /api/v1/sync/product-photos/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z",  // optional
+            "limit": 100,  // optional, default 100
+            "offset": 0    // optional, default 0
+        }
+
+        Returns:
+            - photos: List of photo metadata with image URLs
+            - total: Total number of photos
+            - has_more: Boolean indicating if more records exist
+            - next_offset: Next offset for pagination
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter products
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter products
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+                limit:
+                  type: integer
+                  description: 'Max records per request (default: 100)'
+                offset:
+                  type: integer
+                  description: 'Pagination offset (default: 0)'
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncProductPhotos:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                  limit: 100
+                  offset: 0
+                summary: Sync Product Photos
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/products/:
+    post:
+      operationId: sync_products_create
+      description: |-
+        Get products for Edge Server (for food court concept)
+
+        POST /api/v1/sync/products/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter products
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter products
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncProducts:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Products
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/promotions/:
+    post:
+      operationId: sync_promotions_create
+      description: |-
+        Get promotions for Edge Server
+
+        POST /api/v1/sync/promotions/
+        Body: {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "brand_id": "uuid"  // Optional
+            "updated_since": "2026-01-29T00:00:00Z"  // Optional
+        }
+
+        Returns:
+            - promotions: List of compiled promotion JSON
+            - deleted_ids: List of deleted promotion IDs
+            - sync_timestamp: Current server timestamp
+            - total: Total number of promotions
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter promotions
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter promotions
+                brand_id:
+                  type: string
+                  format: uuid
+                  description: Brand UUID to filter promotions (optional)
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncPromotions:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Promotions
+              SyncPromotionsWithBrand:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                  brand_id: uuid-here
+                summary: Sync Promotions with Brand
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/store-brands/:
+    post:
+      operationId: sync_store_brands_create
+      description: Get store-brand junction table data for multi-brand stores (e.g.,
+        Food Courts)
+      summary: Sync Store-Brand Relationships
+      tags:
+      - Sync API - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter store brands
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter store brands
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Successful response with store brands data
+                content:
+                  application/json:
+                    example:
+                      store_brands:
+                      - id: uuid
+                        store_id: uuid
+                        store_code: YGY-001-BSD
+                        store_name: Cabang BSD
+                        brand_id: uuid
+                        brand_code: YGY-001
+                        brand_name: Ayam Geprek Express
+                        company_id: uuid
+                        is_active: true
+                        start_date: '2024-01-01'
+                        end_date: null
+                        created_at: '2024-01-01T00:00:00Z'
+                        updated_at: '2024-01-01T00:00:00Z'
+                      total: 1
+                      sync_timestamp: '2024-01-15T10:30:00Z'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Bad request - missing or invalid parameters
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Company/Store/Brand not found
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                description: Internal server error
+          description: ''
+  /api/v1/sync/stores/:
+    post:
+      operationId: sync_stores_create
+      description: |-
+        Get stores filtered by company (optionally by store for food court concept)
+
+        POST /api/v1/sync/stores/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid"  # optional
+        }
+
+        Returns:
+            - stores: List of store objects
+            - total: Total number of stores
+            - sync_timestamp: Current server timestamp
+
+        Response Format:
+        {
+            "stores": [
+                {
+                    "id": "uuid",
+                    "brand_id": "uuid",
+                    "brand_code": "YGY-001",
+                    "brand_name": "Ayam Geprek Express",
+                    "company_id": "uuid",
+                    "company_code": "YGY",
+                    "company_name": "Yogya Group",
+                    "store_code": "YGY-001-BSD",
+                    "store_name": "Cabang BSD",
+                    "address": "Jl. BSD Raya No. 123",
+                    "phone": "021-7654321",
+                    "timezone": "Asia/Jakarta",
+                    "latitude": "-6.302100",
+                    "longitude": "106.652900",
+                    "is_active": true,
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-01T00:00:00Z"
+                }
+            ],
+            "total": 1,
+            "sync_timestamp": "2024-01-15T10:30:00Z"
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter stores
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter stores
+              required:
+              - company_id
+            examples:
+              SyncStores:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Stores
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/table-areas/:
+    post:
+      operationId: sync_table_areas_create
+      description: |-
+        Get table areas only for Edge Server (for food court concept)
+
+        POST /api/v1/sync/table-areas/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+
+        Returns:
+            - table_areas: List of dining areas with floor plans
+            - total: Total number of table areas
+            - sync_timestamp: Current server timestamp
+
+        Note: For full sync with tables, use /sync/tables/
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter table areas
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter table areas
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncTableAreas:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Table Areas
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/table-groups/:
+    post:
+      operationId: sync_table_groups_create
+      description: |-
+        Get table groups for Edge Server (for food court concept)
+
+        POST /api/v1/sync/table-groups/
+
+        Request Body:
+        {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // optional
+        }
+
+        Returns:
+            - table_groups: List of table groups with members
+            - total: Total number of table groups
+            - sync_timestamp: Current server timestamp
+
+        Note: Table groups are managed by Edge Server.
+        This API is mainly for reference/reporting at HO.
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter table groups
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter table groups
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncTableGroups:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Table Groups
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/tables/:
+    post:
+      operationId: sync_tables_create
+      description: |-
+        Get tables and table areas for Edge Server (for food court concept)
+
+        POST /api/v1/sync/tables/
+        Body: {
+            "company_id": "uuid",
+            "store_id": "uuid",
+            "updated_since": "2026-01-29T00:00:00Z"  // Optional
+        }
+
+        Returns:
+            - table_areas: List of dining areas with floor plans
+            - tables: List of tables with positions and QR codes
+            - total_areas: Count of table areas
+            - total_tables: Count of tables
+            - sync_timestamp: Current server timestamp
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to filter tables
+                store_id:
+                  type: string
+                  format: uuid
+                  description: Store UUID to filter tables
+                updated_since:
+                  type: string
+                  format: date-time
+                  description: Last sync timestamp for incremental sync (optional)
+              required:
+              - company_id
+              - store_id
+            examples:
+              SyncTables:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                  store_id: uuid-here
+                summary: Sync Tables
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/usage/:
+    post:
+      operationId: sync_usage_create
+      description: |-
+        Upload promotion usage logs from Edge Server
+
+        POST /api/v1/sync/usage/
+
+        Body: {
+            "usages": [
+                {
+                    "promotion_id": "uuid",
+                    "bill_id": "B001",
+                    "discount_amount": 15000.0,
+                    "used_at": "2026-01-27T10:00:00Z",
+                    "store_id": "uuid",
+                    "customer_id": "uuid"
+                }
+            ]
+        }
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                usages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      promotion_id:
+                        type: string
+                        format: uuid
+                        description: Promotion UUID
+                      bill_id:
+                        type: string
+                        description: Bill transaction ID
+                      discount_amount:
+                        type: number
+                        format: float
+                        description: Discount amount applied
+                      used_at:
+                        type: string
+                        format: date-time
+                        description: Usage timestamp
+                      store_id:
+                        type: string
+                        format: uuid
+                        description: Store UUID where used
+                      customer_id:
+                        type: string
+                        format: uuid
+                        description: Customer UUID (optional)
+                    required:
+                    - promotion_id
+                    - bill_id
+                    - discount_amount
+                    - used_at
+                    - store_id
+                  description: Array of promotion usage records
+              required:
+              - usages
+            examples:
+              UploadUsageRecords:
+                value:
+                  usages:
+                  - promotion_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                    bill_id: B001
+                    discount_amount: 15000.0
+                    used_at: '2026-01-27T10:00:00Z'
+                    store_id: uuid-here
+                summary: Upload Usage Records
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/version/:
+    post:
+      operationId: sync_version_create
+      description: |-
+        Get sync version info
+
+        POST /api/v1/sync/version/
+
+        Request Body:
+        {
+            "company_id": "uuid"
+        }
+
+        Returns current data version to help Edge Server decide if sync is needed
+      tags:
+      - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id:
+                  type: string
+                  format: uuid
+                  description: Company UUID to get version info
+              required:
+              - company_id
+            examples:
+              GetVersionInfo:
+                value:
+                  company_id: 812e76b6-f235-4bb2-948a-cae58ee62b97
+                summary: Get Version Info
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/token/:
+    post:
+      operationId: token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      security:
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - Bearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/transactions/bills/push/:
+    post:
+      operationId: transactions_bills_push_create
+      description: Receive a single completed bill from Edge server
+      summary: Push Single Bill
+      tags:
+      - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BillRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '201':
+          description: No response body
+  /api/v1/transactions/bills/push_bulk/:
+    post:
+      operationId: transactions_bills_push_bulk_create
+      description: Receive multiple bills from Edge server in one request
+      summary: Push Bulk Bills
+      tags:
+      - Transactions
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '201':
+          description: No response body
+  /api/v1/transactions/bulk-push/:
+    post:
+      operationId: transactions_bulk_push_create
+      description: Receive mixed transaction data in one request
+      summary: Bulk Push All Data
+      tags:
+      - Transactions
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/transactions/cash-drops/push/:
+    post:
+      operationId: transactions_cash_drops_push_create
+      description: Receive a cash drop record from Edge server
+      summary: Push Cash Drop
+      tags:
+      - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashDropRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CashDropRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CashDropRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/transactions/cash-drops/push_bulk/:
+    post:
+      operationId: transactions_cash_drops_push_bulk_create
+      description: Receive multiple cash drop records from Edge server
+      summary: Push Bulk Cash Drops
+      tags:
+      - Transactions
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/transactions/inventory/push_bulk/:
+    post:
+      operationId: transactions_inventory_push_bulk_create
+      description: Receive stock movements (deductions) from Edge server
+      summary: Push Bulk Inventory Movements
+      tags:
+      - Transactions
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/transactions/sessions/push/:
+    post:
+      operationId: transactions_sessions_push_create
+      description: Receive End of Day session data from Edge server
+      summary: Push Store Session (EOD)
+      tags:
+      - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreSessionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoreSessionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoreSessionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/transactions/shifts/push/:
+    post:
+      operationId: transactions_shifts_push_create
+      description: Receive cashier shift data from Edge server
+      summary: Push Cashier Shift
+      tags:
+      - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashierShiftRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CashierShiftRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CashierShiftRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - Bearer: []
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    BillItemRequest:
+      type: object
+      properties:
+        bill_id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        brand_id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        product_sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+        product_name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        unit_cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        notes:
+          type: string
+          nullable: true
+        status:
+          enum:
+          - PENDING
+          - SENT_TO_KITCHEN
+          - PREPARING
+          - READY
+          - SERVED
+          - VOID
+          type: string
+          description: |-
+            * `PENDING` - Pending
+            * `SENT_TO_KITCHEN` - Sent to Kitchen
+            * `PREPARING` - Preparing
+            * `READY` - Ready
+            * `SERVED` - Served
+            * `VOID` - Void
+          x-spec-enum-id: 1e47e53500004944
+        is_void:
+          type: boolean
+        void_reason:
+          type: string
+          nullable: true
+        modifiers_snapshot: {}
+        kitchen_station_id:
+          type: string
+          format: uuid
+          nullable: true
+        sent_to_kitchen_at:
+          type: string
+          format: date-time
+          nullable: true
+        prepared_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+        voided_at:
+          type: string
+          format: date-time
+          nullable: true
+        voided_by:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - bill_id
+      - brand_id
+      - company_id
+      - created_at
+      - created_by
+      - product_id
+      - product_name
+      - product_sku
+      - quantity
+      - store_id
+      - total
+      - unit_price
+    BillPromotionRequest:
+      type: object
+      properties:
+        bill_id:
+          type: string
+          format: uuid
+        promotion_id:
+          type: string
+          format: uuid
+        promotion_name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        promotion_code:
+          type: string
+          nullable: true
+          maxLength: 100
+        execution_stage:
+          enum:
+          - ITEM_LEVEL
+          - SUBTOTAL
+          - PAYMENT
+          - CASHBACK
+          type: string
+          description: |-
+            * `ITEM_LEVEL` - Item Level
+            * `SUBTOTAL` - Subtotal
+            * `PAYMENT` - Payment
+            * `CASHBACK` - Cashback
+          x-spec-enum-id: a5d1d320fa5ff82f
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        cashback_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        affected_items: {}
+        calculation_detail:
+          nullable: true
+        applied_at:
+          type: string
+          format: date-time
+        applied_by:
+          type: string
+          format: uuid
+      required:
+      - applied_at
+      - applied_by
+      - bill_id
+      - execution_stage
+      - promotion_id
+      - promotion_name
+    BillRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillItemRequest'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentRequest'
+        promotions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillPromotionRequest'
+        company_id:
+          type: string
+          format: uuid
+        brand_id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+          format: uuid
+        bill_number:
+          type: string
+          minLength: 1
+          maxLength: 50
+        bill_type:
+          enum:
+          - DINE_IN
+          - TAKEAWAY
+          - DELIVERY
+          - QRORDER
+          type: string
+          description: |-
+            * `DINE_IN` - Dine In
+            * `TAKEAWAY` - Takeaway
+            * `DELIVERY` - Delivery
+            * `QRORDER` - QR Order
+          x-spec-enum-id: 2b7b3120d0e17a8c
+        status:
+          enum:
+          - OPEN
+          - PAID
+          - VOID
+          - REFUND
+          - PARTIAL_REFUND
+          type: string
+          description: |-
+            * `OPEN` - Open
+            * `PAID` - Paid
+            * `VOID` - Void
+            * `REFUND` - Refund
+            * `PARTIAL_REFUND` - Partial Refund
+          x-spec-enum-id: c55c920e09b8d097
+        table_id:
+          type: string
+          format: uuid
+          nullable: true
+        table_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        pax:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        member_id:
+          type: string
+          format: uuid
+          nullable: true
+        member_code:
+          type: string
+          nullable: true
+          maxLength: 50
+        customer_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        customer_phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        tax_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        service_charge_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        service_charge:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        rounding_adjustment:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        closed_by:
+          type: string
+          format: uuid
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+        voided_by:
+          type: string
+          format: uuid
+          nullable: true
+        voided_at:
+          type: string
+          format: date-time
+          nullable: true
+        voided_reason:
+          type: string
+          nullable: true
+      required:
+      - bill_number
+      - bill_type
+      - brand_id
+      - company_id
+      - created_at
+      - created_by
+      - store_id
+      - terminal_id
+    CashDropRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        brand_id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+          format: uuid
+        transaction_type:
+          enum:
+          - DROP
+          - PICKUP
+          type: string
+          description: |-
+            * `DROP` - Drop
+            * `PICKUP` - Pickup
+          x-spec-enum-id: a6d2d8878c258ba6
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+      required:
+      - amount
+      - brand_id
+      - company_id
+      - created_at
+      - created_by
+      - store_id
+      - terminal_id
+      - transaction_type
+    CashierShiftRequest:
+      type: object
+      properties:
+        store_session_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+          format: uuid
+        cashier_id:
+          type: string
+          format: uuid
+        status:
+          enum:
+          - OPEN
+          - CLOSED
+          type: string
+          description: |-
+            * `OPEN` - Open
+            * `CLOSED` - Closed
+          x-spec-enum-id: ec7757c81d9a3565
+        opening_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        closing_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        expected_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        variance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        opened_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - cashier_id
+      - opened_at
+      - store_session_id
+      - terminal_id
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Display order
+        icon:
+          type: string
+          description: Icon name or path
+          maxLength: 100
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        brand:
+          type: string
+          format: uuid
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent category for hierarchical structure
+      required:
+      - brand
+      - created_at
+      - id
+      - name
+      - updated_at
+    KitchenStation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        code:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+          description: Description of the kitchen station
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Display order
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        company:
+          type: string
+          format: uuid
+          description: Company for multi-tenant isolation
+        brand:
+          type: string
+          format: uuid
+        store:
+          type: string
+          format: uuid
+          description: Kitchen stations are store-specific
+      required:
+      - brand
+      - code
+      - company
+      - created_at
+      - id
+      - name
+      - store
+      - updated_at
+    Modifier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModifierOption'
+          readOnly: true
+        name:
+          type: string
+          description: Modifier group name
+          maxLength: 200
+        is_required:
+          type: boolean
+          description: Customer must select at least one option
+        max_selections:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum selections allowed (0 = unlimited)
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        brand:
+          type: string
+          format: uuid
+      required:
+      - brand
+      - created_at
+      - id
+      - name
+      - options
+      - updated_at
+    ModifierOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        price_adjustment:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Price adjustment (e.g., +5000 for Large)
+        is_default:
+          type: boolean
+          description: Default selection
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modifier:
+          type: string
+          format: uuid
+      required:
+      - created_at
+      - id
+      - modifier
+      - name
+    ModifierOptionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        price_adjustment:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Price adjustment (e.g., +5000 for Large)
+        is_default:
+          type: boolean
+          description: Default selection
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        is_active:
+          type: boolean
+        modifier:
+          type: string
+          format: uuid
+      required:
+      - modifier
+      - name
+    ModifierRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Modifier group name
+          maxLength: 200
+        is_required:
+          type: boolean
+          description: Customer must select at least one option
+        max_selections:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Maximum selections allowed (0 = unlimited)
+        is_active:
+          type: boolean
+        brand:
+          type: string
+          format: uuid
+      required:
+      - brand
+      - name
+    PaginatedCategoryList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    PaginatedKitchenStationList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/KitchenStation'
+    PaginatedModifierList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Modifier'
+    PaginatedPrinterConfigList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrinterConfig'
+    PaginatedProductList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+    PaginatedTableAreaList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableArea'
+    PaginatedTableList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Table'
+    PaymentRequest:
+      type: object
+      properties:
+        bill_id:
+          type: string
+          format: uuid
+        payment_method:
+          enum:
+          - CASH
+          - CARD
+          - QRIS
+          - EWALLET
+          - TRANSFER
+          - VOUCHER
+          - MEMBER_POINTS
+          type: string
+          description: |-
+            * `CASH` - Cash
+            * `CARD` - Card
+            * `QRIS` - QRIS
+            * `EWALLET` - E-Wallet
+            * `TRANSFER` - Bank Transfer
+            * `VOUCHER` - Voucher
+            * `MEMBER_POINTS` - Member Points
+          x-spec-enum-id: 0464ecdb3e06b91b
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        status:
+          enum:
+          - PENDING
+          - SUCCESS
+          - FAILED
+          - REFUND
+          type: string
+          description: |-
+            * `PENDING` - Pending
+            * `SUCCESS` - Success
+            * `FAILED` - Failed
+            * `REFUND` - Refund
+          x-spec-enum-id: 0bf160603d5a5dd0
+        cash_received:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        change:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        external_reference:
+          type: string
+          nullable: true
+          maxLength: 200
+        payment_gateway_response:
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+      required:
+      - amount
+      - bill_id
+      - created_at
+      - created_by
+      - payment_method
+    PrinterConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        station_name:
+          type: string
+          readOnly: true
+        printer_name:
+          type: string
+          maxLength: 200
+        ip_address:
+          type: string
+          description: Printer IP address
+        paper_width:
+          enum:
+          - 58mm
+          - 80mm
+          type: string
+          description: |-
+            * `58mm` - 58mm
+            * `80mm` - 80mm
+          x-spec-enum-id: 89d167e9dc01f86c
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        station:
+          type: string
+          format: uuid
+      required:
+      - created_at
+      - id
+      - ip_address
+      - printer_name
+      - station
+      - station_name
+      - updated_at
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPhoto'
+          readOnly: true
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductModifier'
+          readOnly: true
+        category_name:
+          type: string
+          readOnly: true
+        sku:
+          type: string
+          description: SKU unique per brand
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Main product image
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Cost for margin calculation
+        printer_target:
+          enum:
+          - kitchen
+          - bar
+          - dessert
+          type: string
+          x-spec-enum-id: 1303d4b867a08bf3
+          description: |-
+            Target printer for this product
+
+            * `kitchen` - Kitchen
+            * `bar` - Bar
+            * `dessert` - Dessert
+        track_stock:
+          type: boolean
+          description: Track inventory for this product
+        stock_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          description: Current stock quantity (managed by Edge)
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        brand:
+          type: string
+          format: uuid
+        company:
+          type: string
+          format: uuid
+          nullable: true
+        category:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - brand
+      - category
+      - category_name
+      - cost
+      - created_at
+      - id
+      - modifiers
+      - name
+      - photos
+      - price
+      - sku
+      - updated_at
+    ProductModifier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          type: string
+          format: uuid
+        modifier:
+          type: string
+          format: uuid
+        modifier_details:
+          allOf:
+          - $ref: '#/components/schemas/Modifier'
+          readOnly: true
+      required:
+      - id
+      - modifier
+      - modifier_details
+      - product
+    ProductPhoto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        object_key:
+          type: string
+          description: MinIO object key
+          maxLength: 500
+        filename:
+          type: string
+          description: Original filename
+          maxLength: 255
+        size:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: File size in bytes
+        content_type:
+          type: string
+          maxLength: 100
+        checksum:
+          type: string
+          description: MD5 checksum for integrity
+          maxLength: 64
+        version:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Image version for sync
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        is_primary:
+          type: boolean
+          description: Primary display photo
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        product:
+          type: string
+          format: uuid
+      required:
+      - created_at
+      - id
+      - product
+      - updated_at
+    StoreSessionRequest:
+      type: object
+      properties:
+        store_id:
+          type: string
+          format: uuid
+        brand_id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        session_date:
+          type: string
+          format: date
+        status:
+          enum:
+          - OPEN
+          - CLOSED
+          type: string
+          description: |-
+            * `OPEN` - Open
+            * `CLOSED` - Closed
+          x-spec-enum-id: ec7757c81d9a3565
+        opening_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        closing_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        expected_cash:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        variance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_sales:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_refund:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        opened_at:
+          type: string
+          format: date-time
+        opened_by:
+          type: string
+          format: uuid
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+        closed_by:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - brand_id
+      - company_id
+      - opened_at
+      - opened_by
+      - session_date
+      - store_id
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        area:
+          type: string
+          format: uuid
+        area_name:
+          type: string
+          readOnly: true
+        number:
+          type: string
+          description: Table number (e.g., A1, B5)
+          maxLength: 20
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Maximum guests
+        qr_code:
+          type: string
+          description: QR code for ordering
+          maxLength: 200
+        pos_x:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: X position on floor plan
+        pos_y:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Y position on floor plan
+      required:
+      - area
+      - area_name
+      - capacity
+      - id
+      - number
+    TableArea:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          description: Description of the area layout
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        floor_width:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Floor width in pixels/units
+        floor_height:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Floor height in pixels/units
+        floor_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Floor plan image
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        company:
+          type: string
+          format: uuid
+          nullable: true
+          description: Company for multi-tenant isolation
+        brand:
+          type: string
+          format: uuid
+        store:
+          type: string
+          format: uuid
+          nullable: true
+          description: Store-specific areas (leave blank for brand-wide)
+      required:
+      - brand
+      - created_at
+      - id
+      - name
+      - updated_at
+    TableRequest:
+      type: object
+      properties:
+        area:
+          type: string
+          format: uuid
+        number:
+          type: string
+          minLength: 1
+          description: Table number (e.g., A1, B5)
+          maxLength: 20
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Maximum guests
+        qr_code:
+          type: string
+          description: QR code for ordering
+          maxLength: 200
+        pos_x:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: X position on floor plan
+        pos_y:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Y position on floor plan
+      required:
+      - area
+      - capacity
+      - number
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: foodlife_sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
+servers:
+- url: http://localhost:8002
+  description: Development server
+- url: https://api.yogyagroup.com
+  description: Production server
+tags:
+- name: Authentication
+  description: JWT token management
+- name: Core
+  description: Multi-tenant core (Company, Brand, Store, User)
+- name: Products
+  description: Product catalog & table management
+- name: Members
+  description: Loyalty program (bidirectional sync)
+- name: Promotions
+  description: Promotion engine (12+ types)
+- name: Inventory
+  description: Inventory & recipe (BOM) management
+- name: Transactions
+  description: Transaction push (Edge → HO)
+- name: Analytics
+  description: Reporting & analytics
+externalDocs:
+  description: GitHub Repository
+  url: https://github.com/dadinjaenudin/FoodBeverages-CMS

@@ -149,15 +149,15 @@ class TableInline(admin.TabularInline):
 @admin.register(TableArea)
 class TableAreaAdmin(admin.ModelAdmin):
     list_display = ['name', 'store', 'get_brand_name', 'get_table_count', 'sort_order', 'is_active']
-    list_filter = ['store__brand', 'store', 'is_active', 'created_at']
-    search_fields = ['name', 'store__store_name', 'store__brand__name']
+    list_filter = ['store__company', 'store', 'brand', 'is_active', 'created_at']
+    search_fields = ['name', 'store__store_name', 'brand__name']
     readonly_fields = ['id', 'created_at', 'updated_at']
-    autocomplete_fields = ['store']
+    autocomplete_fields = ['store', 'brand']
     inlines = [TableInline]
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'store', 'name', 'description', 'sort_order', 'is_active')
+            'fields': ('id', 'brand', 'store', 'name', 'description', 'sort_order', 'is_active')
         }),
         ('Floor Plan', {
             'fields': ('floor_width', 'floor_height', 'floor_image'),
@@ -170,8 +170,8 @@ class TableAreaAdmin(admin.ModelAdmin):
     )
     
     def get_brand_name(self, obj):
-        """Get brand name through store"""
-        return obj.store.brand.name
+        """Get brand name"""
+        return obj.brand.name if obj.brand else '-'
     get_brand_name.short_description = 'Brand'
     
     def get_table_count(self, obj):
@@ -183,7 +183,7 @@ class TableAreaAdmin(admin.ModelAdmin):
 @admin.register(Tables)
 class TableAdmin(admin.ModelAdmin):
     list_display = ['number', 'area', 'get_store', 'get_brand', 'capacity', 'status', 'is_active']
-    list_filter = ['area__store__brand', 'area__store', 'area', 'status', 'is_active']
+    list_filter = ['area__store__company', 'area__brand', 'area__store', 'area', 'status', 'is_active']
     search_fields = ['number', 'area__name', 'area__store__store_name', 'qr_code']
     readonly_fields = ['id', 'created_at', 'updated_at']
     autocomplete_fields = ['area']

@@ -64,7 +64,7 @@ class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='products')
     company = models.ForeignKey('core.Company', on_delete=models.PROTECT, related_name='company_products', null=True, blank=True, default=None)  # ← Nullable for migration
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     sku = models.CharField(max_length=50, help_text="SKU unique per brand")
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
