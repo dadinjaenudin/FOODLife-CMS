@@ -437,7 +437,7 @@
                             </button>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-blue-900 mb-1">Table Number</label>
                                 <input x-model="newTable.number" 
@@ -453,6 +453,15 @@
                                        max="20"
                                        placeholder="4"
                                        class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-blue-900 mb-1">Shape</label>
+                                <select x-model="newTable.shape"
+                                        class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="round">Round</option>
+                                    <option value="square">Square</option>
+                                    <option value="rectangle">Rectangle</option>
+                                </select>
                             </div>
                         </div>
                         
@@ -496,7 +505,7 @@
                             </button>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-orange-900 mb-1">Table Number</label>
                                 <input x-model="editTable.number" 
@@ -512,6 +521,15 @@
                                        max="20"
                                        placeholder="4"
                                        class="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-orange-900 mb-1">Shape</label>
+                                <select x-model="editTable.shape"
+                                        class="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                                    <option value="round">Round</option>
+                                    <option value="square">Square</option>
+                                    <option value="rectangle">Rectangle</option>
+                                </select>
                             </div>
                         </div>
                         
@@ -543,20 +561,6 @@
                                 Update Table
                             </button>
                         </div>
-                    </div>
-
-                    <!-- View Toggle Buttons -->
-                    <div class="mb-6 flex gap-3">
-                        <button @click="tableViewMode = 'grid'" 
-                                :class="tableViewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
-                                class="px-4 py-2 rounded-lg font-medium transition">
-                            <i class="fas fa-th-large mr-2"></i>Grid View
-                        </button>
-                        <button @click="tableViewMode = 'floorplan'" 
-                                :class="tableViewMode === 'floorplan' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
-                                class="px-4 py-2 rounded-lg font-medium transition">
-                            <i class="fas fa-map mr-2"></i>Floor Plan
-                        </button>
                     </div>
 
                     <!-- Grid View (Original) -->
@@ -1002,14 +1006,16 @@ function tableAreaManager() {
             number: '',
             capacity: 4,
             pos_x: '',
-            pos_y: ''
+            pos_y: '',
+            shape: 'square'
         },
         editTable: {
             id: '',
             number: '',
             capacity: 4,
             pos_x: '',
-            pos_y: ''
+            pos_y: '',
+            shape: 'square'
         },
         activeAreasCount: {{ tableareas.paginator.count|default:0 }},
         totalTablesCount: 0,
@@ -1143,6 +1149,7 @@ function tableAreaManager() {
                 capacity: this.newTable.capacity,
                 pos_x: this.newTable.pos_x || 0,
                 pos_y: this.newTable.pos_y || 0,
+                shape: this.newTable.shape || 'square',
                 status: 'available',
                 is_active: true
             };
@@ -1194,15 +1201,16 @@ function tableAreaManager() {
                             capacity: data.table.capacity,
                             pos_x: data.table.pos_x,
                             pos_y: data.table.pos_y,
-                            status: data.table.status
+                            status: data.table.status,
+                            shape: data.table.shape
                         });
                         
                         // Update stats
                         this.calculateStats();
                         
-                        // Reset form and hide
+                        // Reset form and keep it open for next entry
                         this.resetAddForm();
-                        this.showAddTableForm = false;
+                        this.showAddTableForm = true;
                     }
                 } else {
                     this.showToastMessage('Error: ' + data.message, 'error');
@@ -1219,7 +1227,8 @@ function tableAreaManager() {
                 number: '',
                 capacity: 4,
                 pos_x: '',
-                pos_y: ''
+                pos_y: '',
+                shape: 'square'
             };
         },
 
@@ -1229,7 +1238,8 @@ function tableAreaManager() {
                 number: table.number,
                 capacity: table.capacity,
                 pos_x: table.pos_x || 0,
-                pos_y: table.pos_y || 0
+                pos_y: table.pos_y || 0,
+                shape: table.shape || 'square'
             };
             this.showEditTableForm = true;
             this.showAddTableForm = false;
@@ -1267,8 +1277,11 @@ function tableAreaManager() {
                 number: this.editTable.number.trim(),
                 capacity: this.editTable.capacity,
                 pos_x: this.editTable.pos_x || 0,
-                pos_y: this.editTable.pos_y || 0
+                pos_y: this.editTable.pos_y || 0,
+                shape: this.editTable.shape || 'square'
             };
+
+            console.log('Updating table with payload:', updateData);
 
             fetch('/products/tableareas/tables/update/', {
                 method: 'POST',
@@ -1279,11 +1292,15 @@ function tableAreaManager() {
                 },
                 body: JSON.stringify(updateData)
             })
-            .then(response => {
+            .then(async response => {
+                console.log('Update response status:', response.status);
+                const data = await response.json().catch(() => null);
+                console.log('Update response data:', data);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const message = data?.message || `HTTP error! status: ${response.status}`;
+                    throw new Error(message);
                 }
-                return response.json();
+                return data;
             })
             .then(data => {
                 if (data.success) {
@@ -1304,7 +1321,8 @@ function tableAreaManager() {
                                 number: data.table.number,
                                 capacity: data.table.capacity,
                                 pos_x: data.table.pos_x,
-                                pos_y: data.table.pos_y
+                                pos_y: data.table.pos_y,
+                                shape: data.table.shape
                             };
                         }
                         

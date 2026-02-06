@@ -341,6 +341,11 @@ class Tables(models.Model):
         ('occupied', 'Occupied'),
         ('reserved', 'Reserved'),
     ]
+    SHAPE_CHOICES = [
+        ('round', 'Round'),
+        ('square', 'Square'),
+        ('rectangle', 'Rectangle'),
+    ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     area = models.ForeignKey(TableArea, on_delete=models.PROTECT, related_name='tables')
@@ -351,6 +356,14 @@ class Tables(models.Model):
     # Floor plan positioning
     pos_x = models.IntegerField(null=True, blank=True, help_text="X position on floor plan")
     pos_y = models.IntegerField(null=True, blank=True, help_text="Y position on floor plan")
+
+    # Table shape (for floor plan / UI)
+    shape = models.CharField(
+        max_length=20,
+        choices=SHAPE_CHOICES,
+        default='square',
+        help_text="Table shape (round, square, rectangle)"
+    )
     
     # NOTE: status and table_group are managed by Edge, not synced from HO
     # These fields are for reference only at HO

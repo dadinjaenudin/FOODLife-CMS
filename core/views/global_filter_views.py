@@ -2,7 +2,7 @@ from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from core.models import Company, Brand, Store
+from core.models import Company, Brand, Store, StoreBrand
 
 @login_required
 @require_POST
@@ -25,8 +25,18 @@ def set_global_filter(request):
         try:
             store = Store.objects.select_related('company').prefetch_related('brands').get(id=store_id, is_active=True)
             request.session['global_store_id'] = store_id
-            request.session['global_brand_id'] = str(store.brand.id)
-            request.session['global_company_id'] = str(store.brand.company.id)
+            request.session['global_company_id'] = str(store.company.id)
+
+            # Store can have multiple brands; pick first active store-brand
+            store_brand = StoreBrand.objects.select_related('brand').filter(
+                store=store,
+                is_active=True,
+                brand__is_active=True,
+            ).order_by('brand__name').first()
+            if store_brand:
+                request.session['global_brand_id'] = str(store_brand.brand.id)
+            else:
+                request.session.pop('global_brand_id', None)
         except Store.DoesNotExist:
             pass
     

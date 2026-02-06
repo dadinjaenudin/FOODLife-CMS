@@ -1415,7 +1415,7 @@ def sync_tables(request):
     
     Returns:
         - table_areas: List of dining areas with floor plans
-        - tables: List of tables with positions and QR codes
+        - tables: List of tables with positions, QR codes, and shape (round/square/rectangle)
         - total_areas: Count of table areas
         - total_tables: Count of tables
         - sync_timestamp: Current server timestamp
@@ -1521,6 +1521,7 @@ def sync_tables(request):
                 'qr_code': table.qr_code,
                 'pos_x': table.pos_x,
                 'pos_y': table.pos_y,
+                'shape': table.shape,  # Table shape: round, square, rectangle
                 'status': table.status,  # Note: Status managed by Edge
                 'is_active': table.is_active,
                 'created_at': table.created_at.isoformat(),

@@ -280,6 +280,7 @@ def area_table_layout(request, area_id):
             'status': table.status,
             'pos_x': table.pos_x or 0,
             'pos_y': table.pos_y or 0,
+            'shape': table.shape,
             'qr_code': table.qr_code
         })
     
@@ -335,6 +336,7 @@ def create_table(request):
         capacity = data.get('capacity')
         pos_x = data.get('pos_x', 0)
         pos_y = data.get('pos_y', 0)
+        shape = data.get('shape', 'square')
         status = data.get('status', 'available')
         is_active = data.get('is_active', True)
         
@@ -367,6 +369,7 @@ def create_table(request):
             capacity=capacity,
             pos_x=pos_x,
             pos_y=pos_y,
+            shape=shape,
             status=status,
             is_active=is_active,
             qr_code=f'QR-{area.store.store_name if area.store else area.brand.name}-{area.name}-{number}'
@@ -382,9 +385,10 @@ def create_table(request):
                 'pos_x': table.pos_x,
                 'pos_y': table.pos_y,
                 'status': table.status,
+                'shape': table.shape,
                 'qr_code': table.qr_code
             },
-            'reload': True  # Tell frontend to reload page
+            'reload': False  # Keep modal open for adding more tables
         })
         
         return response
@@ -414,6 +418,7 @@ def update_table(request):
         capacity = data.get('capacity')
         pos_x = data.get('pos_x', 0)
         pos_y = data.get('pos_y', 0)
+        shape = data.get('shape', 'square')
         
         if not table_id or not number:
             return JsonResponse({
@@ -435,13 +440,21 @@ def update_table(request):
                 'message': 'Capacity must be a valid number'
             }, status=400)
         
-        # Convert position values to float
+        # Convert position values to int
         try:
-            pos_x = float(pos_x) if pos_x is not None else 0
-            pos_y = float(pos_y) if pos_y is not None else 0
+            pos_x = int(float(pos_x)) if pos_x is not None else 0
+            pos_y = int(float(pos_y)) if pos_y is not None else 0
         except (ValueError, TypeError):
             pos_x = 0
             pos_y = 0
+
+        # Validate shape
+        valid_shapes = {choice[0] for choice in Tables.SHAPE_CHOICES}
+        if shape not in valid_shapes:
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid table shape'
+            }, status=400)
         
         # Get table
         table = get_object_or_404(Tables, pk=table_id)
@@ -463,6 +476,7 @@ def update_table(request):
         table.capacity = capacity
         table.pos_x = pos_x
         table.pos_y = pos_y
+        table.shape = shape
         table.save()
         
         return JsonResponse({
@@ -474,10 +488,11 @@ def update_table(request):
                 'capacity': table.capacity,
                 'pos_x': table.pos_x,
                 'pos_y': table.pos_y,
+                'shape': table.shape,
                 'status': table.status,
                 'qr_code': table.qr_code
             },
-            'reload': True  # Tell frontend to reload page
+            'reload': False  # Keep modal open, avoid full reload
         })
         
     except json.JSONDecodeError:

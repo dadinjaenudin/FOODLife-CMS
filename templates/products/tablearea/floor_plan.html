@@ -144,10 +144,17 @@
                     {% endif %}
                     {% endwith %}
                         
-                        <!-- Table with Circular Shape (matching enhanced view) -->
+                        <!-- Table Shape (round/square/rectangle) -->
                         <div class="relative">
-                            <!-- Table Base - CIRCULAR -->
-                            <div class="table-base w-16 h-16 rounded-full border-3 flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all duration-200 hover:shadow-xl hover:scale-105
+                            <!-- Table Base -->
+                            <div class="table-base border-3 flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all duration-200 hover:shadow-xl hover:scale-105
+                                {% if table.shape == 'round' %}
+                                    w-24 h-24 rounded-full
+                                {% elif table.shape == 'rectangle' %}
+                                    w-36 h-24 rounded-lg
+                                {% else %}
+                                    w-24 h-24 rounded-lg
+                                {% endif %}
                                 {% if table.status == 'available' %}
                                     bg-green-100 border-green-400 text-green-800 hover:bg-green-200
                                 {% elif table.status == 'occupied' %}
